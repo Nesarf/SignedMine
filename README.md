@@ -124,6 +124,11 @@ SignedMine/
   GAME.md                 玩法、提示语义、档位、操作、测试、已知限制
 ```
 
+## 版本
+
+版本号固定为 `0.3.25`：修正直接并入，不再递增。`package.json`、便携包的 `README.txt`
+与 release 上的资产用同一个号，重新构建就覆盖。
+
 ## 许可证
 
 MIT，见 [LICENSE](LICENSE)。
