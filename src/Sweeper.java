@@ -236,7 +236,10 @@ public class Sweeper extends JFrame {
         // 旧版把 rest(q2) - inner 直接当成「形状外雷数下界」，于是把「两边都不在」的那些格子
         // 算进了形状外，上界被压低到与下界相等，判出假的「精确值」——玩家照着推理会错。
         // 判定：lb == base 才算精确（此时形状内恰好 base 颗）。
-        Hint hintFor(int q, int[] used) {
+        // force=true 时不丢掉「至少 0 颗」这种没有结论的形状：
+        // 「全部」档要给每个数字格都挂上符号与小数字，数据层就得把它们一起留着，
+        // 由绘图层按档位自己过滤。
+        Hint hintFor(int q, int[] used, boolean force) {
             if (!rev[q]) return null;
             int v = num(q);
             if (v == 0) return null;
@@ -265,7 +268,7 @@ public class Sweeper extends JFrame {
                 }
                 if (lb > un) lb = un;                      // 形状内雷数不可能超过未开格数
                 boolean exact = (lb == base);
-                if (!exact && lb < 1) continue;             // 「至少 0 颗」不携带信息，不显示
+                if (!exact && lb < 1 && !force) continue;   // 「至少 0 颗」不携带信息，默认不显示
                 int score = (exact ? 100 : 0) + lb * 10 - un - (used == null ? 0 : used[k]);
                 if (score > bestScore) {
                     bestScore = score;
@@ -281,7 +284,7 @@ public class Sweeper extends JFrame {
             ArrayList<Hint> out = new ArrayList<>();
             int[] used = new int[NK];
             for (int q = 0; q < R*C; q++) {
-                Hint h = hintFor(q, used);
+                Hint h = hintFor(q, used, true);
                 if (h != null) { out.add(h); used[keyIndex(h.key)]++; }
             }
             return out;
@@ -390,7 +393,7 @@ public class Sweeper extends JFrame {
         weak = new ArrayList<>();
         int[] used = new int[NK];
         for (int q = 0; q < R * C; q++) {
-            Hint h = board.hintFor(q, used);
+            Hint h = board.hintFor(q, used, true);
             if (h != null) { weakByCell[q] = h; weak.add(h); used[keyIndex(h.key)]++; }
         }
     }
@@ -413,7 +416,7 @@ public class Sweeper extends JFrame {
     }
     static boolean addWeak(int q, int[] used) {
         if (q < 0 || q >= R * C || weakByCell[q] != null) return false;
-        Hint h = board.hintFor(q, used);
+        Hint h = board.hintFor(q, used, true);
         if (h == null) return false;
         weakByCell[q] = h; used[keyIndex(h.key)]++;
         return true;
@@ -475,6 +478,7 @@ public class Sweeper extends JFrame {
     final JLabel mineLabel = new JLabel(" ");
     final JLabel timeLabel = new JLabel("00:00");
     final JCheckBox hintBox = new JCheckBox("显示形状提示", true);
+    final JComboBox<String> densityBox;          // 提成字段，截图入口可以按档位设置它
     int seconds = 0; boolean running = false; int densityLevel = 1;
     long startedAt = 0; int highlight = -1;
     final javax.swing.Timer clock;
@@ -505,11 +509,11 @@ public class Sweeper extends JFrame {
         bar.add(hintBox);
         hintBox.addActionListener(e -> panel.repaint());
         String[] dens = {"精简", "标准", "全部"};
-        JComboBox<String> density = new JComboBox<>(dens);
-        density.setSelectedIndex(1);
-        density.addActionListener(e -> { densityLevel = density.getSelectedIndex(); panel.repaint(); });
+        densityBox = new JComboBox<>(dens);
+        densityBox.setSelectedIndex(1);
+        densityBox.addActionListener(e -> { densityLevel = densityBox.getSelectedIndex(); panel.repaint(); });
         bar.add(new JLabel(" 提示 "));
-        bar.add(density);
+        bar.add(densityBox);
         JButton hb = new JButton("提示");
         hb.addActionListener(e -> showHint());
         bar.add(hb);
@@ -563,7 +567,7 @@ public class Sweeper extends JFrame {
         if (v == 0) { status.setText(" 空格，周围没有雷"); return; }
         String exactTxt = null, weakTxt = null;
         for (Hint h : hints) if (h.i == i) exactTxt = DISP.get(h.key) + h.lb;
-        for (Hint h : weak) if (h.i == i) weakTxt = DISP.get(h.key) + h.lb;
+        for (Hint h : weak) if (h.i == i && (h.exact || h.lb >= 1)) weakTxt = DISP.get(h.key) + h.lb;
         String pos = "R" + (i / C + 1) + "C" + (i % C + 1);
         if (exactTxt != null)
             status.setText(" " + pos + " 数字 " + v + "：共有 " + exactTxt + " 颗雷在这个形状里");
@@ -597,8 +601,10 @@ public class Sweeper extends JFrame {
         if (board == null) { mineLabel.setText(" "); return; }   // 首次发牌全失败时盘面还不存在
         int flags = 0;
         for (int i = 0; i < R*C; i++) if (board.flag[i]) flags++;
-        int ex = 0; for (Hint h : weak) if (h.exact) ex++;
-        mineLabel.setText("剩余雷 " + (M - flags) + " · 精确 " + ex + " / 至少 " + (weak.size() - ex) + "  ");
+        // weak 里现在也装着「至少 0 颗」的形状（给「全部」档用），统计时不把它们算进「至少」
+        int ex = 0, weakCount = 0;
+        for (Hint h : weak) { if (h.exact) ex++; else if (h.lb >= 1) weakCount++; }
+        mineLabel.setText("剩余雷 " + (M - flags) + " · 精确 " + ex + " / 至少 " + weakCount + "  ");
         if (board.dead) { status.setText(" 踩到雷了 —— 按新局再来"); running = false; }
         else if (board.revCount() == R*C - M) {
             double sec = (System.currentTimeMillis() - startedAt) / 1000.0;
@@ -739,7 +745,8 @@ public class Sweeper extends JFrame {
                 if (!board.rev[h.i] || drawn.contains(h.i)) continue;
                 boolean any = false;
                 for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) any = true;
-                if (!any) continue;
+                // 「全部」档连没有结论（至少 0 颗）的形状也画，形状里是否还有未开格就不重要了
+                if (densityLevel < 2 && !any) continue;
                 if (densityLevel == 0 && !h.exact) continue;
                 if (densityLevel == 1 && !h.exact && h.lb < 2) continue;
                 int r = h.i / C, c = h.i % C;
@@ -788,8 +795,11 @@ public class Sweeper extends JFrame {
 
     public static void main(String[] args) throws Exception {
         final String shot = args.length >= 2 && args[0].equals("shot") ? args[1] : null;
+        // 第三个参数可选：提示档位 0=精简 1=标准 2=全部。截图核对不同档位时用。
+        final int density = args.length >= 3 ? Integer.parseInt(args[2]) : -1;
         SwingUtilities.invokeLater(() -> {
             Sweeper f = new Sweeper();
+            if (density >= 0 && density <= 2) f.densityBox.setSelectedIndex(density);
             f.setVisible(true);
             if (shot != null) {
                 javax.swing.Timer t = new javax.swing.Timer(900, ev -> {
