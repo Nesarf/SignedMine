@@ -1,41 +1,14 @@
 {
-  "name": "local-sweeper",
-  "version": "0.2.0",
+  "name": "signedmine",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "main": "lib/index.js",
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  },
-  "engines": {
-    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
-  },
-  "dshGo": {
-    "v": 1,
-    "title": {
-      "zh": "扫雷",
-      "en": "Sweeper"
-    },
-    "icon": "grid",
-    "wants": [],
-    "contributes": {
-      "panels": [
-        {
-          "id": "sweeper",
-          "title": {
-            "zh": "扫雷",
-            "en": "Sweeper"
-          },
-          "icon": "grid",
-          "placement": [
-            "features",
-            "session.tab",
-            "chat.panel"
-          ]
-        }
-      ]
-    }
+  "description": "Minesweeper with shape hints: a Swing desktop build and a single-file web build",
+  "scripts": {
+    "sync": "node test/sync-inline.mjs",
+    "check": "node test/check-html.mjs",
+    "smoke": "node test/ui-smoke.mjs",
+    "golden": "node test/golden.mjs",
+    "cross": "node test/cross.mjs --bulk 200"
   }
 }

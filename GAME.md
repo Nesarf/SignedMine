@@ -4,39 +4,23 @@
 
 | 路径 | 作用 |
 | --- | --- |
-| `android/assets/sweeper.html` | 单文件应用（HTML + CSS + JS），浏览器直接打开，也是 APK 里装的那一份 |
-| `lib/core.js` | 引擎唯一权威：发牌、形状提示、求援、求解 |
-| `android/` | APK 工程：清单、MainActivity、图标、构建脚本 |
+| `web/sweeper.html` | 单文件网页版（HTML + CSS + JS），浏览器直接打开 |
+| `lib/core.js` | 引擎：发牌、形状提示、求援、求解 |
 | `src/Sweeper.java` | Swing 桌面版，单文件无依赖，已与 JS 引擎同一口径 |
-| `src/saolei.py`、`src/ui_sweeper.py`、`src/sweeper_core.py` | 早期 Python 实现，未同步，见下方「已知限制」 |
 | `test/` | 回归与性能脚本，见下方「测试」 |
-
-> 这份文档原先写的 `sweeper_app.html` 和 `hint_research.py` 在仓库里都不存在
-> （单文件应用实际在 `android/assets/sweeper.html`）。已按实际路径改正。
 
 ## 引擎与内联副本
 
-单文件是这个应用的设计约束（APK 里只装一个 html），所以引擎必须内联；
+网页版是单文件（打开一个 html 就能玩），所以引擎必须内联；
 于是「一份代码」变成「两份文本 + 一个生成器」：
 
 ```sh
-node test/sync-inline.mjs          # 把 lib/core.js 生成进 html 的内联引擎段
+node test/sync-inline.mjs          # 把 lib/core.js 生成进 web/sweeper.html 的内联引擎段
 node test/sync-inline.mjs --check  # 只比对，不一致时退出码 1
 ```
 
 改引擎只改 `lib/core.js`，然后跑生成器。`test/check-html.mjs` 会在两边漂移时报错，
 也会用 `vm.Script` 解析两段脚本，确认单文件至少还能跑起来。
-
-## 构建 APK
-
-```sh
-cd android
-./build.sh
-adb install -r build/sweeper.apk
-```
-
-依赖：`aapt2`（系统包）、`d8.jar` 与 `apksigner.jar`（`SDK=/opt/android-sdk`）、JDK。
-签名用 `android/debug.keystore`（固定，勿删），否则升级会报签名冲突。
 
 ## 提示语义
 
@@ -153,8 +137,6 @@ node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 - 形状提示由「形状内雷数落在 `[下界, 剩余雷数]`」这一条推出，不做多约束联合搜索：
   发牌时若一条提示推进不了局面，会继续加提示，连续 3 轮无进展就换一局
   （`build` 的 stall 判定）。高级档单次成功率约 2%，`deal` 靠重试兜到 200 局零失败。
-- `src/saolei.py` / `src/ui_sweeper.py` / `src/sweeper_core.py` 是早期 Python 实现，
-  提示逻辑仍包含旧的上界推断，**可能与网页版结论不同**，仅作算法参考，不再同步。
 - `src/Sweeper.java` 与 `lib/core.js` 共用同一支随机数（mulberry32）、同一套上下界判定，
   并且都按格号升序遍历，所以同一个 seed 会发出同一局、选出同一串形状提示。
   `test/cross-check.mjs` 当前覆盖 3 档 × 200 个 seed = 600 条用例

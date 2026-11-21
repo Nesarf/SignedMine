@@ -1,7 +1,6 @@
 # SignedMine
 
-带「形状提示」的扫雷。一套引擎，几种形态：Swing 桌面版、单文件网页（兼作 APK），
-以及一个 dsh-go 面板。
+带「形状提示」的扫雷，纯桌面：一个 Swing 桌面版，一个单文件网页版（浏览器打开即玩）。
 
 规则还是经典扫雷，多出来的是提示：每个已翻开的数字格上最多挂一条形状提示，
 告诉你某个八邻域形状里有几颗雷，而且**这条提示恒成立**，不会随局面变化而失效。
@@ -10,11 +9,11 @@
 
 | 形态 | 入口 | 说明 |
 | --- | --- | --- |
-| Swing 桌面版 | `src/Sweeper.java` | 单文件无依赖，最完整的交互形态 |
-| 单文件网页 | `android/assets/sweeper.html` | 浏览器直接打开；`android/` 是它的 APK 壳 |
-| dsh-go 面板 | `lib/index.js` | 面板只做展示：发一局 9×9、画字符盘、报提示条数 |
-| 引擎 | `lib/core.js` | 发牌、形状提示、求援与求解；**其余各形态都以它为准** |
-| Python 参考 | `src/saolei.py`、`src/ui_sweeper.py`、`src/sweeper_core.py` | 早期实现，提示口径未同步，仅作算法参考 |
+| Swing 桌面版 | `src/Sweeper.java` | 单文件无依赖，主力形态 |
+| 单文件网页 | `web/sweeper.html` | 浏览器直接打开，不需要服务器 |
+| 引擎 | `lib/core.js` | 发牌、形状提示、求援与求解 |
+
+两种形态共用同一套算法：同一个 seed 会发出同一局、选出同一串提示（见「交叉验证」）。
 
 ## 快速开始
 
@@ -25,15 +24,7 @@ javac -encoding UTF-8 src/Sweeper.java
 java Sweeper
 ```
 
-网页版：直接用浏览器打开 `android/assets/sweeper.html`，不需要服务器。
-
-插件（需要 dsh-go 宿主）：
-
-```sh
-dsh plugin --profile web add .
-```
-
-插件 id 仍然是 `local-sweeper`，与它作为 dgupb 插件包时的 id 一致，装过的不会断。
+网页版：用浏览器打开 `web/sweeper.html`，不需要服务器。
 
 ## 形状提示
 
@@ -52,18 +43,16 @@ dsh plugin --profile web add .
 右下角  共有 n 颗   该形状里恰好有 n 颗雷
 ```
 
-形状内雷数的可证明区间是 `[剩余雷数 - 形状外未开邻格数, 剩余雷数]`，
-下界还可以被每个已翻开邻居的剩余雷数继续抬升。只有上下界相等时才写「共有」，
-所以两种提示都恒成立。四档显示（精简 / 标准 / 全部 / 关闭）、操作方式、
-构建步骤和已知限制都在 [GAME.md](GAME.md) 里。
+形状内雷数的可证明区间是 `[下界, 剩余雷数]`，下界由「形状外未开邻格数」与
+「每个已翻开邻居的剩余雷数」两条推导取较大者。只有下界等于剩余雷数时才写「共有」，
+所以两种提示都恒成立。四档显示、操作方式与已知限制都在 [GAME.md](GAME.md) 里。
 
 ## 引擎与内联副本
 
-单文件是网页形态的设计约束（APK 里只装一个 html），所以引擎必须内联；
-于是「一份代码」变成「两份文本 + 一个生成器」：
+网页版是单文件，所以引擎必须内联；于是「一份代码」变成「两份文本 + 一个生成器」：
 
 ```sh
-node test/sync-inline.mjs          # 把 lib/core.js 生成进 html 的内联引擎段
+node test/sync-inline.mjs          # 把 lib/core.js 生成进 web/sweeper.html 的内联引擎段
 node test/sync-inline.mjs --check  # 只比对，不一致时退出码 1
 ```
 
@@ -74,16 +63,14 @@ node test/sync-inline.mjs --check  # 只比对，不一致时退出码 1
 不需要第三方依赖，JS 与 Java 各一套：
 
 ```sh
-# 引擎与单文件应用
-node test/check-html.mjs      # 两段脚本能否解析 + 内联引擎是否与 core.js 一致
-node test/ui-smoke.mjs        # 最小 DOM 桩里真跑 openAt / chordAt / undo / findMove
-node test/golden.mjs          # 行为基线（与 test/golden.json 对比可查回归）
-node test/bench.mjs           # 发牌与中局重算的绝对耗时
-node test/deal-stats.mjs 200  # 发牌成功率与耗时分布
-node test/build-rate.mjs      # 单次 build 的成功率，决定重试次数
-node test/compare-orig.mjs    # 与仓库原始引擎（test/core-orig.mjs）逐项对比
-node test/cross.mjs --bulk 200   # 输出 JS 侧基线（与 Java 的 CrossProbe --bulk 200 同格式）
-node test/cross-check.mjs        # 两侧基线比对：3 档 × 200 seed，ok / 雷位 / 开局 / 提示全等
+# 引擎与网页版
+node test/check-html.mjs         # 两段脚本能否解析 + 内联引擎是否与 core.js 一致
+node test/ui-smoke.mjs           # 最小 DOM 桩里真跑 openAt / chordAt / undo / findMove
+node test/golden.mjs             # 行为基线（与 test/golden.json 对比可查回归）
+node test/bench.mjs              # 发牌与中局重算的绝对耗时
+node test/deal-stats.mjs 200     # 发牌成功率与耗时分布
+node test/build-rate.mjs         # 单次 build 的成功率，决定重试次数
+node test/compare-orig.mjs       # 与仓库原始引擎（test/core-orig.mjs）逐项对比
 
 # Java 桌面版
 javac -encoding UTF-8 -d build-java src/Sweeper.java
@@ -94,26 +81,28 @@ java -cp build-java ExactDump             # 打印一条「精确值不成立」
 java -cp build-java Sweeper shot out.png  # 无头截图，顺带确认界面能起来
 ```
 
-## 构建 APK
+## 交叉验证
+
+两套实现共用同一支随机数（mulberry32）、同一套上下界判定，并且都按格号升序遍历。
+所以同一个 seed 必须发出同一局、选出同一串提示：
 
 ```sh
-cd android
-./build.sh
-adb install -r build/sweeper.apk
+java -cp build-java CrossProbe --bulk 200 | Out-File -Encoding utf8 build-java/cross-java.jsonl
+node test/cross.mjs --bulk 200 | Out-File -Encoding utf8 build-java/cross-js.jsonl
+node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 ```
 
-`build.sh` 是给 Termux 环境写的（`SDK=/opt/android-sdk`、`/usr/bin/aapt2`，
-末尾会 `cp` 到 `/sdcard/Download/DSH-Go/`），换平台要先改这几个路径。
+当前基线：3 档 × 200 个 seed = 600 条，四项全等。
 
 ## 目录
 
 ```text
 SignedMine/
-  lib/            core.js（引擎）、index.js（dsh-go 面板）
-  src/            Sweeper.java、早期 Python 实现
-  android/        单文件网页 + APK 工程
-  test/           JS 回归脚本、Java 探测（test/java/）
-  GAME.md         玩法、提示语义、档位、操作、构建、已知限制
+  lib/core.js        引擎
+  src/Sweeper.java   Swing 桌面版
+  web/sweeper.html   单文件网页版
+  test/              回归脚本、Java 探测（test/java/）、行为基线
+  GAME.md            玩法、提示语义、档位、操作、测试、已知限制
 ```
 
 ## 许可证

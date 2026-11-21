@@ -1,6 +1,6 @@
-// 把 lib/core.js 同步进 android/assets/sweeper.html 的内联引擎段。
+// 把 lib/core.js 同步进 web/sweeper.html 的内联引擎段。
 //
-// 单文件是这个应用的设计约束（APK 里只装一个 html），所以引擎必须内联；
+// 网页版是单文件（打开一个 html 就能玩），所以引擎必须内联；
 // 于是「一份代码」变成「两份文本 + 一个生成器」。改引擎只改 lib/core.js，
 // 然后跑这个脚本；test/check-html.mjs 会在两边不一致时报错。
 //
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const CORE = path.join(root, 'lib', 'core.js');
-const HTML = path.join(root, 'android', 'assets', 'sweeper.html');
+const HTML = path.join(root, 'web', 'sweeper.html');
 
 export const BEGIN = '// ===== ENGINE BEGIN：由 lib/core.js 生成，勿手改（node test/sync-inline.mjs）=====';
 export const END = '// ===== ENGINE END =====';
