@@ -2,6 +2,7 @@
 *.class
 build/
 build-java/
+build-portable/
 
 # 依赖与缓存
 node_modules/
