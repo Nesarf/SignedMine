@@ -7,7 +7,7 @@
 [![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)]()
 [![play in browser](https://img.shields.io/badge/play-in%20browser-39c5bb.svg)](https://nesarf.github.io/SignedMine/)
 
-![专家档，全部提示](assets/shot-all.png)
+![专家档，全部提示](assets/shot-expert-all.png)
 
 不用下载也能玩：[**打开网页版**](https://nesarf.github.io/SignedMine/)
 
@@ -41,18 +41,103 @@
 
 格距按窗口宽高取小值算，棋盘在面板内居中，字号跟着格子走，窗口缩放即时重排。
 
+### 从最小到最大
+
+迷你 6×6 · 5 雷：
+
+![迷你 6×6](assets/shot-mini-all.png)
+
+专家 16×30 · 100 雷：
+
+![专家 16×30](assets/shot-expert-all.png)
+
+极限 30×40 · 240 雷：
+
+![极限 30×40](assets/shot-extreme-standard.png)
+
+### 二十四张
+
+八档难度 × 三档提示，全部从桌面版实拍。
+
+<details>
+<summary>迷你 6×6 · 5 雷</summary>
+
 <p>
-<img src="assets/shot-mini.png" width="49%" alt="迷你 6×6">
-<img src="assets/shot-9x9.png" width="49%" alt="初级 9×9">
+<img src="assets/shot-mini-concise.png" width="32%" alt="精简">
+<img src="assets/shot-mini-standard.png" width="32%" alt="标准">
+<img src="assets/shot-mini-all.png" width="32%" alt="全部">
 </p>
+</details>
+
+<details>
+<summary>初级 9×9 · 10 雷</summary>
+
 <p>
-<img src="assets/shot-16x16.png" width="49%" alt="中级 16×16">
-<img src="assets/shot-16x24.png" width="49%" alt="高级 16×24">
+<img src="assets/shot-easy-concise.png" width="32%" alt="精简">
+<img src="assets/shot-easy-standard.png" width="32%" alt="标准">
+<img src="assets/shot-easy-all.png" width="32%" alt="全部">
 </p>
+</details>
+
+<details>
+<summary>入门 12×12 · 22 雷</summary>
+
 <p>
-<img src="assets/shot-20x30.png" width="49%" alt="超大 20×30">
-<img src="assets/shot-30x40.png" width="49%" alt="极限 30×40">
+<img src="assets/shot-casual-concise.png" width="32%" alt="精简">
+<img src="assets/shot-casual-standard.png" width="32%" alt="标准">
+<img src="assets/shot-casual-all.png" width="32%" alt="全部">
 </p>
+</details>
+
+<details>
+<summary>中级 16×16 · 40 雷</summary>
+
+<p>
+<img src="assets/shot-medium-concise.png" width="32%" alt="精简">
+<img src="assets/shot-medium-standard.png" width="32%" alt="标准">
+<img src="assets/shot-medium-all.png" width="32%" alt="全部">
+</p>
+</details>
+
+<details>
+<summary>高级 16×24 · 70 雷</summary>
+
+<p>
+<img src="assets/shot-hard-concise.png" width="32%" alt="精简">
+<img src="assets/shot-hard-standard.png" width="32%" alt="标准">
+<img src="assets/shot-hard-all.png" width="32%" alt="全部">
+</p>
+</details>
+
+<details>
+<summary>专家 16×30 · 100 雷</summary>
+
+<p>
+<img src="assets/shot-expert-concise.png" width="32%" alt="精简">
+<img src="assets/shot-expert-standard.png" width="32%" alt="标准">
+<img src="assets/shot-expert-all.png" width="32%" alt="全部">
+</p>
+</details>
+
+<details>
+<summary>超大 20×30 · 120 雷</summary>
+
+<p>
+<img src="assets/shot-huge-concise.png" width="32%" alt="精简">
+<img src="assets/shot-huge-standard.png" width="32%" alt="标准">
+<img src="assets/shot-huge-all.png" width="32%" alt="全部">
+</p>
+</details>
+
+<details>
+<summary>极限 30×40 · 240 雷</summary>
+
+<p>
+<img src="assets/shot-extreme-concise.png" width="32%" alt="精简">
+<img src="assets/shot-extreme-standard.png" width="32%" alt="标准">
+<img src="assets/shot-extreme-all.png" width="32%" alt="全部">
+</p>
+</details>
 
 ## 档位
 
@@ -62,10 +147,12 @@
 | 标准 | 再加「至少 2 颗」的弱提示 |
 | 全部 | 每个数字格都挂一条，含「至少 0 颗」——`←0` 的意思就是这格暂时没有结论 |
 
+专家档上三档的差别：
+
 <p>
-<img src="assets/shot-concise.png" width="32%" alt="精简">
-<img src="assets/shot-standard.png" width="32%" alt="标准">
-<img src="assets/shot-all.png" width="32%" alt="全部">
+<img src="assets/shot-expert-concise.png" width="32%" alt="精简">
+<img src="assets/shot-expert-standard.png" width="32%" alt="标准">
+<img src="assets/shot-expert-all.png" width="32%" alt="全部">
 </p>
 
 ## 两种形态
@@ -153,9 +240,9 @@ node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 写完立即 flush；网页版用 `localStorage`。桌面版状态栏通关时显示「最佳 n 秒」。
 
 ```sh
-java -cp build-java PrefProbe            # 现有成绩
+java -cp build-java PrefProbe              # 现有成绩
 java -cp build-java PrefSet 16 30 100 675  # 手工写一条
-java -cp build-java PrefClean            # 清掉探针留下的键
+java -cp build-java PrefClean              # 清掉探针留下的键
 ```
 
 ## 打包便携版
@@ -180,7 +267,7 @@ SignedMine/
   lib/core.js             引擎
   src/Sweeper.java        Swing 桌面版
   index.html              单文件网页版
-  assets/                 截图
+  assets/                 24 张截图（8 档难度 × 3 档提示）
   test/                   回归脚本、Java 探测（test/java/）、行为基线
   packaging/              便携包里的说明文件
   build-portable.mjs      便携包打包脚本
