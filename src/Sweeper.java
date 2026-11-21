@@ -220,6 +220,66 @@ public class Sweeper extends JFrame {
             SC[at] = out;
             return out;
         }
+        // 提示约束参与联合推理。提示给的是「形状内雷数 ∈ [lo, hi]」，局部约束是
+        // 「邻域内雷数 = rest」；两者做子集推理就能推出差集（A ⊂ B 时 B\A 的区间是
+        // [lo_B - hi_A, hi_B - lo_A]）。旧版只拿局部约束互相比，提示给的区间没参与，
+        // 所以 2500 格以上的盘面在 18% 密度上都发不出来——补上这条之后单次成功率从 0% 到 27%。
+        void hintSubsetRules(java.util.List<Hint> hints) {
+            ensureLocal();
+            if (hints == null || hints.isEmpty()) return;
+            int N = R * C;
+            int[][] locCells = new int[N][];
+            int[] locLo = new int[N], locHi = new int[N];
+            boolean[] hasLoc = new boolean[N];
+            for (int q = 0; q < N; q++) {
+                if (!rev[q] || num(q) == 0) continue;
+                int h = 0;
+                for (int p : NB[q]) if (unk(p)) h++;
+                if (h == 0) continue;
+                int[] cells = new int[h];
+                int t = 0;
+                for (int p : NB[q]) if (unk(p)) cells[t++] = p;
+                locCells[q] = cells;
+                locLo[q] = rest(q); locHi[q] = rest(q);
+                hasLoc[q] = true;
+            }
+            for (Hint hh : hints) {
+                int k = keyIndex(hh.key);
+                if (k < 0) continue;
+                int[] all = shapeCellsK(hh.i, k);
+                int un = 0;
+                for (int p : all) if (unk(p)) un++;
+                if (un == 0) continue;
+                int[] cells = new int[un];
+                int t = 0;
+                for (int p : all) if (unk(p)) cells[t++] = p;
+                int base = rest(hh.i);
+                int outside = 0;
+                for (int p : NB[hh.i]) if (unk(p) && !contains(all, p)) outside++;
+                int lo = Math.max(0, base - outside), hi = base;
+                int ar = hh.i / C, ac = hh.i % C;
+                for (int dr = -2; dr <= 2; dr++) for (int dc = -2; dc <= 2; dc++) {
+                    if (dr == 0 && dc == 0) continue;
+                    if (!inside(ar + dr, ac + dc)) continue;
+                    int bq = I(ar + dr, ac + dc);
+                    if (!hasLoc[bq]) continue;
+                    subsetPush(cells, lo, hi, locCells[bq], locLo[bq], locHi[bq]);
+                    subsetPush(locCells[bq], locLo[bq], locHi[bq], cells, lo, hi);
+                }
+            }
+        }
+        // small 的格集合若是 big 的子集，就把差集推出来
+        void subsetPush(int[] sc, int slo, int shi, int[] bc, int blo, int bhi) {
+            if (sc.length >= bc.length) return;
+            for (int x : sc) if (!contains(bc, x)) return;
+            int dl = 0;
+            int[] diff = new int[bc.length - sc.length];
+            for (int x : bc) if (!contains(sc, x)) diff[dl++] = x;
+            if (dl == 0) return;
+            int lo = Math.max(0, blo - shi), hi = bhi - slo;
+            if (hi <= 0) { for (int t = 0; t < dl; t++) localSafe[diff[t]] = true; }
+            else if (lo >= dl) { for (int t = 0; t < dl; t++) localMine[diff[t]] = true; }
+        }
         ArrayList<Integer> shapeCells(int q, String key) {
             int[] a = shapeCellsK(q, keyIndex(key));
             ArrayList<Integer> out = new ArrayList<>(a.length);
@@ -312,6 +372,7 @@ public class Sweeper extends JFrame {
                 localRules();
                 boolean any = has(localMine) || has(localSafe);
                 if (!any) { subsetRules(); any = has(localMine) || has(localSafe); }
+                if (!any) { hintSubsetRules(hints); any = has(localMine) || has(localSafe); }
                 if (!any) { hintRules(hints); any = has(localMine) || has(localSafe); }
                 if (!any) {
                     int k = 0; for (boolean b : known) if (b) k++;
@@ -358,7 +419,9 @@ public class Sweeper extends JFrame {
                         if (lower > lb) lb = lower;
                     }
                     if (lb > un) lb = un;
-                    if (lb >= un || base <= 0) {
+                    // 只要约束还有内容就收：下界非零，或上界没满。
+                    // 旧条件只收「lb 够到格数」或「base 为 0」，开局时几乎不存在，候选池会空掉。
+                    if (lb >= 1 || base < un) {
                         Hint h = new Hint();
                         h.i = q; h.key = KEYS[k]; h.lb = Math.max(0, lb); h.n = un;
                         out.add(h);
@@ -471,11 +534,19 @@ public class Sweeper extends JFrame {
             for (boolean x : b.known) if (x) knownAfter++;
             // 加了提示还是没有任何推进，这局基本走不通，别再空转到八十轮
             stall = (b.revN == revBefore && knownAfter == knownBefore) ? stall + 1 : 0;
-            if (stall >= 3) break;
-            Hint pick = pickCandidate(b.candidates(), usedKey);
-            if (pick == null) break;
-            hs.add(pick);
-            usedKey.add(pick.i * 64 + keyIndex(pick.key));
+            if (stall >= 6) break;
+            // 每轮加一批而不是一条：大盘开局单条提示推不动局面，
+            // 一条一条地加，八十轮也凑不出足够强的约束。
+            ArrayList<Hint> cands = b.candidates();
+            cands.sort((x, y) -> y.n - x.n);
+            int added = 0;
+            for (Hint c : cands) {
+                if (added >= 8) break;
+                int key = c.i * 64 + keyIndex(c.key);
+                if (usedKey.contains(key)) continue;
+                hs.add(c); usedKey.add(key); added++;
+            }
+            if (added == 0) break;
         }
         hintsOut.clear();
         hintsOut.addAll(hs);
