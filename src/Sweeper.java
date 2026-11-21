@@ -672,16 +672,15 @@ public class Sweeper extends JFrame {
             int cw = (availW - 2*pad) / Math.max(C, 1);
             // 下限放到 14：50×50 这种 2500 格的盘面靠滚动看，不靠缩到看不清
             int next = Math.max(14, Math.min(34, cw));
-            boolean changed = (next != cell);
             cell = next;
             ox = pad; oy = pad;
             // 字号跟着格子走：极限档的格子只有二十几 px，固定 17 px 的数字会和小字叠在一起
             numFont = new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(cell * 0.46f)));
             smallFont = new Font("SansSerif", Font.PLAIN, Math.max(7, Math.round(cell * 0.26f)));
-            if (changed) {
-                Dimension want = new Dimension(C*cell + 2*pad, R*cell + 2*pad);
-                if (!want.equals(getPreferredSize())) { setPreferredSize(want); revalidate(); }
-            }
+            // 每次都对齐首选尺寸：早先只在 cell 变化时才设，而首次 cell 正好等于初值，
+            // 于是尺寸从未被设置过，面板被布局成 0 宽，画出来是一片空白。
+            Dimension want = new Dimension(C*cell + 2*pad, R*cell + 2*pad);
+            if (!want.equals(getPreferredSize())) { setPreferredSize(want); revalidate(); }
         }
         void chord(int i) {
             if (board == null || board.dead || !board.rev[i]) return;

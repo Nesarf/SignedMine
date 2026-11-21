@@ -28,7 +28,8 @@
 
 ## 难度
 
-24 档，密度从 12% 到 21%，地块从 25 到 3000。每档实测 20 局零失败。
+24 档，密度从 12% 到 21%，地块从 25 到 3000。每档实测 20 局零失败；
+2500 格以上的三档各测 6 局，也是零失败。
 
 | 盘面 | 雷 | 密度 | 地块 | 盘面 | 雷 | 密度 | 地块 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -45,7 +46,7 @@
 | 16×16 | 51 | 19.9% | 256 | 50×50 | 500 | 20.0% | 2500 |
 | 16×20 | 60 | 18.8% | 320 | 60×50 | 600 | 20.0% | 3000 |
 
-最后三档是 2500 格以上的大图，一屏放不下，棋盘放在滚动区里看；
+最后三档从 2500 格起，一屏放不下，棋盘放在滚动区里看；
 50×50 的发牌要 2.5 秒左右（界面上会先显示「生成中…」）。
 
 密度再往 23% 以上走（例如 20×30 · 140），单次 build 的成功率会掉到一半以下，
@@ -124,7 +125,7 @@ javac -encoding UTF-8 -cp build-java -d build-java test/java/EngineProbe.java
 java -cp build-java EngineProbe 30          # 发牌成功率/耗时、提示自证、中局重算耗时
 java -cp build-java IncrementalProbe        # 增量补算出的提示在推进中是否仍恒成立
 java -cp build-java ExactDump               # 打印一条「精确值不成立」提示的中间量
-java -cp build-java Sweeper shot out.png 2 15  # 截图：档位 2（全部）、难度 15（16×30·100）
+java -cp build-java Sweeper shot out.png 2 14  # 截图：档位 2（全部）、难度 14（16×30·100）
 ```
 
 ## 交叉验证
@@ -138,7 +139,7 @@ node test/cross.mjs --bulk 200 | Out-File -Encoding utf8 build-java/cross-js.jso
 node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 ```
 
-当前基线：3 档 × 200 个 seed = 600 条，四项全等。
+当前基线：3 个尺寸（9×9 / 16×16 / 16×30）× 200 个 seed = 600 条，四项全等。
 
 ## 成绩
 
