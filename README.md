@@ -53,6 +53,9 @@
 
 格距按可用宽度算，字号跟着格子走，小盘面居中、大盘面滚动，窗口缩放即时重排。
 
+难度下拉框的最后一项是「自定义…」，可以输入任意行/列/雷：行与列 3~100，雷数少于格数，
+密度不超过 22%（再高发牌成功率太低）。自定义的成绩与固定档一样按 `best_RxC_M` 记录。
+
 ## 档位
 
 | 档位 | 显示什么 |
@@ -94,6 +97,9 @@ java Sweeper
 | 连开周围 | 中键，或双击数字 | `空格`（光标在已翻开的数字格上） |
 | 移动光标 | — | 方向键 |
 
+工具栏的「撤销」最多回退 200 步，翻开、插旗、连开周围都算一步；撤销会把那一格上挂的
+提示一起退回去。
+
 ## 改规则时的顺序
 
 规则在两边各有一份：`src/Sweeper.java` 是本体，`lib/core.js` 是网页版的引擎。改一处不算改完。
@@ -126,6 +132,8 @@ javac -encoding UTF-8 -d build-java src/Sweeper.java
 javac -encoding UTF-8 -cp build-java -d build-java test/java/EngineProbe.java
 java -cp build-java EngineProbe 30          # 发牌成功率/耗时、提示自证、中局重算耗时
 java -cp build-java LevelProbe 10           # 24 档逐档发牌，看有没有发不出来的档
+java -cp build-java UndoProbe               # 撤销：局面、提示表、按钮状态、新局清空
+java -cp build-java CustomProbe             # 自定义难度与下拉框回落
 java -cp build-java IncrementalProbe        # 增量补算出的提示在推进中是否仍恒成立
 java -cp build-java ExactDump               # 打印一条「精确值不成立」提示的中间量
 java -cp build-java Sweeper shot out.png 2 14  # 截图：档位 2（全部）、难度 14（16×30·100）

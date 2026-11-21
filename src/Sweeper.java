@@ -372,6 +372,19 @@ public class Sweeper extends JFrame {
     // ---------- 生成 ----------
     static Board board; static ArrayList<Hint> hints = new ArrayList<>(); static ArrayList<Hint> weak = new ArrayList<>();
     static Hint[] weakByCell;
+
+    // ---- 撤销 ----
+    // 每一步改动局面之前把 rev/known/flag 与提示表整个存一份。
+    // 提示也要一起回滚：撤销之后那一格可能又变成未翻开，提示不该还挂着。
+    static final int HISTORY_LIMIT = 200;
+    static final class Snapshot {
+        boolean[] rev, known, flag;
+        int revN;
+        boolean dead;
+        Hint[] weakByCell;
+    }
+    static final ArrayDeque<Snapshot> history = new ArrayDeque<>();
+    static JButton undoBtn;          // 无历史时禁用
     static boolean[] snapshot;
     static int R = 16, C = 30, M = 100;
     static String mode = "高级 16×30 · 100 雷";
@@ -497,6 +510,7 @@ public class Sweeper extends JFrame {
     final JCheckBox hintBox = new JCheckBox("显示形状提示", true);
     final JComboBox<String> densityBox;          // 提成字段，截图入口可以按档位设置它
     final JComboBox<String> levelBox;            // 同上，难度
+    boolean syncingLevel = false;                // 程序改下拉框时抑制监听器
     int seconds = 0; boolean running = false; int densityLevel = 1;
     long startedAt = 0; int highlight = -1;
     final javax.swing.Timer clock;
@@ -510,17 +524,24 @@ public class Sweeper extends JFrame {
         bar.setFloatable(false);
         JButton ng = new JButton("新局");
         ng.addActionListener(e -> { startAgain(); });
-        String[] levels = LEVEL_NAMES;
+        String[] levels = java.util.Arrays.copyOf(LEVEL_NAMES, LEVEL_NAMES.length + 1);
+        levels[levels.length - 1] = "自定义…";
         levelBox = new JComboBox<>(levels);
         levelBox.setSelectedIndex(DEFAULT_LEVEL);
         levelBox.addActionListener(e -> {
+            if (syncingLevel) return;               // 程序改选项时不要再发一局
             int idx = levelBox.getSelectedIndex();
             if (idx >= 0 && idx < LEVELS.length) start(LEVELS[idx][0], LEVELS[idx][1], LEVELS[idx][2]);
+            else if (idx == LEVELS.length) customGame();
         });
         bar.add(new JLabel(" 难度 "));
         bar.add(levelBox);
         bar.addSeparator();
         bar.add(ng);
+        undoBtn = new JButton("撤销");
+        undoBtn.addActionListener(e -> undo());
+        undoBtn.setEnabled(false);
+        bar.add(undoBtn);
         bar.addSeparator();
         bar.add(hintBox);
         hintBox.addActionListener(e -> panel.repaint());
@@ -564,6 +585,7 @@ public class Sweeper extends JFrame {
 
     void start(int rows, int cols, int mines) {
         R = rows; C = cols; M = mines;
+        history.clear();
         seconds = 0; running = true; highlight = -1;
         startedAt = System.currentTimeMillis();
         timeLabel.setText("0.0s");
@@ -574,6 +596,74 @@ public class Sweeper extends JFrame {
         revalidate(); repaint();
     }
     void startAgain() { start(R, C, M); }
+
+    // 自定义难度：三个数字，密度上限与固定档一致——22% 以上发牌成功率太低。
+    void customGame() {
+        JSpinner rs = new JSpinner(new SpinnerNumberModel(Math.max(3, R), 3, 100, 1));
+        JSpinner cs = new JSpinner(new SpinnerNumberModel(Math.max(3, C), 3, 100, 1));
+        JSpinner ms = new JSpinner(new SpinnerNumberModel(Math.max(1, M), 1, 20000, 1));
+        JPanel p = new JPanel(new java.awt.GridLayout(3, 2, 6, 6));
+        p.add(new JLabel("行")); p.add(rs);
+        p.add(new JLabel("列")); p.add(cs);
+        p.add(new JLabel("雷")); p.add(ms);
+        int ok = JOptionPane.showConfirmDialog(this, p, "自定义难度", JOptionPane.OK_CANCEL_OPTION);
+        if (ok != JOptionPane.OK_OPTION) { syncLevelBox(); return; }
+        int r = (Integer) rs.getValue(), c = (Integer) cs.getValue(), m = (Integer) ms.getValue();
+        if (m >= r * c) { status.setText(" 雷数要小于格数"); syncLevelBox(); return; }
+        double dens = m * 100.0 / (r * c);
+        if (dens > 22) {
+            status.setText(String.format(" 密度 %.1f%% 太高，22%% 以上发牌成功率太低", dens));
+            syncLevelBox();
+            return;
+        }
+        start(r, c, m);
+    }
+
+    // 把下拉框拨回与当前盘面匹配的那一档（自定义取消或输入不合法时用）
+    void syncLevelBox() {
+        int idx = -1;
+        for (int i = 0; i < LEVELS.length; i++) {
+            if (LEVELS[i][0] == R && LEVELS[i][1] == C && LEVELS[i][2] == M) { idx = i; break; }
+        }
+        if (idx < 0) idx = DEFAULT_LEVEL;
+        syncingLevel = true;
+        levelBox.setSelectedIndex(idx);
+        syncingLevel = false;
+    }
+
+    // 改动局面之前先把当前状态整份存下来
+    void pushHistory() {
+        if (board == null) return;
+        Snapshot s = new Snapshot();
+        s.rev = board.rev.clone();
+        s.known = board.known.clone();
+        s.flag = board.flag.clone();
+        s.revN = board.revN;
+        s.dead = board.dead;
+        s.weakByCell = weakByCell == null ? null : weakByCell.clone();
+        history.addLast(s);
+        if (history.size() > HISTORY_LIMIT) history.removeFirst();
+    }
+
+    void undo() {
+        if (board == null) return;
+        if (history.isEmpty()) { status.setText(" 没有可撤销的步骤"); return; }
+        Snapshot s = history.removeLast();
+        board.rev = s.rev.clone();
+        board.known = s.known.clone();
+        board.flag = s.flag.clone();
+        board.revN = s.revN;
+        board.dead = s.dead;
+        weakByCell = s.weakByCell == null ? null : s.weakByCell.clone();
+        weak = new ArrayList<>();
+        if (weakByCell != null) {
+            for (int q = 0; q < R*C; q++) if (weakByCell[q] != null) weak.add(weakByCell[q]);
+        }
+        running = !board.dead;
+        panel.repaint();
+        updateCounters();
+        if (!board.dead) status.setText(" 已撤销一步");
+    }
 
     String bestKey(){ return "best_" + R + "x" + C + "_" + M; }
     // 用明确的节点名，不依赖 userNodeForPackage：默认包会落到 /<unnamed> 这种不好查的路径。
@@ -643,6 +733,7 @@ public class Sweeper extends JFrame {
             status.setText(String.format(" 清完了 —— %.1f 秒（最佳 %.1f 秒，%d 条提示）", sec, best, hints.size()));
             running = false;
         }
+        if (undoBtn != null) undoBtn.setEnabled(!history.isEmpty());
     }
 
     class BoardPanel extends JPanel {
@@ -689,6 +780,7 @@ public class Sweeper extends JFrame {
             int flags = 0;
             for (int p : board.nbs(i)) if (board.flag[p]) flags++;
             if (flags != v) return;
+            pushHistory();                    // 连开周围也是一步，撤销要能退回连开之前
             for (int p : board.nbs(i)) {
                 if (board.dead) break;                          // 已经踩雷就别再顺着循环往下开
                 if (!board.rev[p] && !board.flag[p]) { board.open(p); topUpWeak(); }
@@ -703,11 +795,12 @@ public class Sweeper extends JFrame {
             if (!board.inside(r, c)) return;
             int i = board.I(r, c);
             if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger()) {
-                if (!board.rev[i]) { board.flag[i] = !board.flag[i]; repaint(); updateCounters(); }
+                if (!board.rev[i]) { pushHistory(); board.flag[i] = !board.flag[i]; repaint(); updateCounters(); }
                 return;
             }
             if (board.rev[i]) { describeCell(i); return; }
             if (board.flag[i] || board.dead) return;
+            pushHistory();
             board.open(i);
             topUpWeak();
             if (board.revCount() == R*C - M) for (int k = 0; k < R*C; k++) if (board.mine[k]) board.flag[k] = true;

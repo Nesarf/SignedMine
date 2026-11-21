@@ -42,7 +42,31 @@ for (let i = 0; i < n; i++) {
   if (Math.abs(densList[i] - want) > 0.05) fail(`${where} 密度不符：应为 ${want}%，README 写 ${densList[i]}%`);
 }
 
-// 3) 引用的文件是否存在
+// 3) GAME.md 的难度表是另一种布局：每行三组「盘面 / 雷 / 地块」，列优先。
+//    它没有密度列，所以只比盘面、雷数与地块数。
+const gameMd = fs.readFileSync(path.join(root, 'GAME.md'), 'utf8');
+const cols = [[], [], []];
+for (const line of gameMd.split(/\r?\n/)) {
+  if (!/^\|\s*\d+×\d+\s*\|/.test(line)) continue;
+  const cells = line.split('|').map((s) => s.trim()).filter(Boolean);
+  for (let g = 0; g < 3; g++) {
+    const base = g * 3;
+    const m = /^(\d+)×(\d+)$/.exec(cells[base] || '');
+    if (!m) continue;
+    cols[g].push([+m[1], +m[2], +cells[base + 1], +cells[base + 2]]);
+  }
+}
+const fromGame = [...cols[0], ...cols[1], ...cols[2]];
+console.log(`GAME.md 表格：${fromGame.length} 档（三列 ${cols.map((c) => c.length).join(' / ')}）`);
+if (fromGame.length !== levels.length) fail(`GAME.md 档数不一致：代码 ${levels.length}，文档 ${fromGame.length}`);
+for (let i = 0; i < Math.min(fromGame.length, levels.length); i++) {
+  const [r, c, m, cells] = fromGame[i];
+  const [R, C, M] = levels[i];
+  if (r !== R || c !== C || m !== M) fail(`GAME.md 第 ${i + 1} 档盘面不符：代码 ${R}×${C}·${M}，文档 ${r}×${c}·${m}`);
+  if (cells !== R * C) fail(`GAME.md 第 ${i + 1} 档地块数不符：应为 ${R * C}，文档写 ${cells}`);
+}
+
+// 4) 引用的文件是否存在
 const refs = new Set();
 for (const m of readme.matchAll(/\]\((?!https?:)([^)#]+)\)/g)) refs.add(m[1]);
 for (const m of readme.matchAll(/src="assets\/([^"]+)"/g)) refs.add('assets/' + m[1]);
