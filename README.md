@@ -7,7 +7,7 @@
 [![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)]()
 [![play in browser](https://img.shields.io/badge/play-in%20browser-39c5bb.svg)](https://nesarf.github.io/SignedMine/)
 
-![全部档的盘面](assets/screenshot.png)
+![专家档，全部提示](assets/shot-all.png)
 
 不用下载也能玩：[**打开网页版**](https://nesarf.github.io/SignedMine/)
 
@@ -25,6 +25,48 @@
 可证明的区间是「形状内雷数落在 [下界, 剩余雷数]」：下界由「形状外未开邻格数」与
 「每个已翻开邻居的剩余雷数」两条推导取较大者，只有下界等于剩余雷数时才写「共有」。
 所以两种提示都**恒成立**，不会随局面变化而失效——这是这个游戏唯一特别的地方。
+
+## 难度
+
+| 难度 | 盘面 | 雷 | 密度 |
+| --- | --- | --- | --- |
+| 迷你 | 6×6 | 5 | 13.9% |
+| 初级 | 9×9 | 10 | 12.3% |
+| 入门 | 12×12 | 22 | 15.3% |
+| 中级 | 16×16 | 40 | 15.6% |
+| 高级 | 16×24 | 70 | 18.2% |
+| 专家 | 16×30 | 100 | 20.8% |
+| 超大 | 20×30 | 120 | 20.0% |
+| 极限 | 30×40 | 240 | 20.0% |
+
+格距按窗口宽高取小值算，棋盘在面板内居中，字号跟着格子走，窗口缩放即时重排。
+
+<p>
+<img src="assets/shot-mini.png" width="49%" alt="迷你 6×6">
+<img src="assets/shot-9x9.png" width="49%" alt="初级 9×9">
+</p>
+<p>
+<img src="assets/shot-16x16.png" width="49%" alt="中级 16×16">
+<img src="assets/shot-16x24.png" width="49%" alt="高级 16×24">
+</p>
+<p>
+<img src="assets/shot-20x30.png" width="49%" alt="超大 20×30">
+<img src="assets/shot-30x40.png" width="49%" alt="极限 30×40">
+</p>
+
+## 档位
+
+| 档位 | 显示什么 |
+| --- | --- |
+| 精简 | 非平凡的精确值（0 < n < 形状格数） |
+| 标准 | 再加「至少 2 颗」的弱提示 |
+| 全部 | 每个数字格都挂一条，含「至少 0 颗」——`←0` 的意思就是这格暂时没有结论 |
+
+<p>
+<img src="assets/shot-concise.png" width="32%" alt="精简">
+<img src="assets/shot-standard.png" width="32%" alt="标准">
+<img src="assets/shot-all.png" width="32%" alt="全部">
+</p>
 
 ## 两种形态
 
@@ -57,19 +99,6 @@ java Sweeper
 | 连开周围 | 中键，或双击数字 | `空格`（光标在已翻开的数字格上） |
 | 移动光标 | — | 方向键 |
 
-## 档位
-
-| 档位 | 显示什么 |
-| --- | --- |
-| 精简 | 非平凡的精确值（0 < n < 形状格数） |
-| 标准 | 再加「至少 2 颗」的弱提示 |
-| 全部 | 每个数字格都挂一条，含「至少 0 颗」——`←0` 的意思就是这格暂时没有结论 |
-| 关闭 | 不显示提示，纯经典玩法 |
-
-「标准」档下没有结论的数字格是空的，「全部」档会逐格铺满：
-
-![标准档](assets/screenshot-standard.png)
-
 ## 引擎与内联副本
 
 网页版是单文件（打开一个 html 就能玩），所以引擎必须内联；于是「一份代码」变成
@@ -99,10 +128,10 @@ node test/compare-orig.mjs       # 与仓库原始引擎（test/core-orig.mjs）
 # Java 桌面版
 javac -encoding UTF-8 -d build-java src/Sweeper.java
 javac -encoding UTF-8 -cp build-java -d build-java test/java/EngineProbe.java
-java -cp build-java EngineProbe 30        # 发牌成功率/耗时、提示自证、中局重算耗时
-java -cp build-java IncrementalProbe      # 增量补算出的提示在推进中是否仍恒成立
-java -cp build-java ExactDump             # 打印一条「精确值不成立」提示的中间量
-java -cp build-java Sweeper shot out.png 2  # 无头截图，第三个参数是档位
+java -cp build-java EngineProbe 30          # 发牌成功率/耗时、提示自证、中局重算耗时
+java -cp build-java IncrementalProbe        # 增量补算出的提示在推进中是否仍恒成立
+java -cp build-java ExactDump               # 打印一条「精确值不成立」提示的中间量
+java -cp build-java Sweeper shot out.png 2 5  # 截图：档位 2、难度 5
 ```
 
 ## 交叉验证
@@ -118,6 +147,17 @@ node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 
 当前基线：3 档 × 200 个 seed = 600 条，四项全等。
 
+## 成绩
+
+每条难度的最佳成绩单独记，落在 `HKCU\Software\JavaSoft\Prefs\SignedMine`，
+写完立即 flush；网页版用 `localStorage`。桌面版状态栏通关时显示「最佳 n 秒」。
+
+```sh
+java -cp build-java PrefProbe            # 现有成绩
+java -cp build-java PrefSet 16 30 100 675  # 手工写一条
+java -cp build-java PrefClean            # 清掉探针留下的键
+```
+
 ## 打包便携版
 
 ```sh
@@ -131,8 +171,7 @@ node build-portable.mjs --out D:\dist
 - `SignedMine-<版本>-win-x64-portable.zip` —— 压缩包，解压即用
 
 运行时只带 `java.base` / `java.datatransfer` / `java.xml` / `java.prefs` / `java.desktop`
-五个模块，从完整 JRE 的 128 MB 压到 42 MB 左右。少一个模块 Swing 就起不来，
-所以这是按「够用」取的，不是按「尽量小」。
+五个模块，从完整 JRE 的 128 MB 压到 42 MB 左右。
 
 ## 目录
 
@@ -141,7 +180,7 @@ SignedMine/
   lib/core.js             引擎
   src/Sweeper.java        Swing 桌面版
   index.html              单文件网页版
-  assets/                 README 用的截图
+  assets/                 截图
   test/                   回归脚本、Java 探测（test/java/）、行为基线
   packaging/              便携包里的说明文件
   build-portable.mjs      便携包打包脚本

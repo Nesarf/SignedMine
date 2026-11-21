@@ -376,6 +376,18 @@ public class Sweeper extends JFrame {
     static int R = 16, C = 30, M = 100;
     static String mode = "高级 16×30 · 100 雷";
 
+    // 难度梯度：密度都在 20% 上下，实测这些都能稳定发牌（见 README 的交叉验证）。
+    // 密度再往 23% 以上走，单次 build 的成功率会掉到一半以下，发牌要重试很久。
+    static final int[][] LEVELS = {
+        {6, 6, 5}, {9, 9, 10}, {12, 12, 22}, {16, 16, 40},
+        {16, 24, 70}, {16, 30, 100}, {20, 30, 120}, {30, 40, 240}
+    };
+    static final String[] LEVEL_NAMES = {
+        "迷你 6×6 · 5 雷", "初级 9×9 · 10 雷", "入门 12×12 · 22 雷", "中级 16×16 · 40 雷",
+        "高级 16×24 · 70 雷", "专家 16×30 · 100 雷", "超大 20×30 · 120 雷", "极限 30×40 · 240 雷"
+    };
+    static final int DEFAULT_LEVEL = 5;
+
     // 只取 n 最大、且还没用过的那一条；同 n 时保留先出现的（与「按 n 稳定降序取首个」等价）。
     static Hint pickCandidate(ArrayList<Hint> cands, HashSet<Integer> used) {
         Hint best = null; int bestN = -1;
@@ -479,6 +491,7 @@ public class Sweeper extends JFrame {
     final JLabel timeLabel = new JLabel("00:00");
     final JCheckBox hintBox = new JCheckBox("显示形状提示", true);
     final JComboBox<String> densityBox;          // 提成字段，截图入口可以按档位设置它
+    final JComboBox<String> levelBox;            // 同上，难度
     int seconds = 0; boolean running = false; int densityLevel = 1;
     long startedAt = 0; int highlight = -1;
     final javax.swing.Timer clock;
@@ -492,17 +505,15 @@ public class Sweeper extends JFrame {
         bar.setFloatable(false);
         JButton ng = new JButton("新局");
         ng.addActionListener(e -> { startAgain(); });
-        String[] levels = {"初级 9×9 · 10 雷", "中级 16×16 · 40 雷", "高级 16×30 · 100 雷"};
-        JComboBox<String> lv = new JComboBox<>(levels);
-        lv.setSelectedIndex(2);
-        lv.addActionListener(e -> {
-            int idx = lv.getSelectedIndex();
-            if (idx == 0) start(9, 9, 10);
-            else if (idx == 1) start(16, 16, 40);
-            else start(16, 30, 100);
+        String[] levels = LEVEL_NAMES;
+        levelBox = new JComboBox<>(levels);
+        levelBox.setSelectedIndex(DEFAULT_LEVEL);
+        levelBox.addActionListener(e -> {
+            int idx = levelBox.getSelectedIndex();
+            if (idx >= 0 && idx < LEVELS.length) start(LEVELS[idx][0], LEVELS[idx][1], LEVELS[idx][2]);
         });
         bar.add(new JLabel(" 难度 "));
-        bar.add(lv);
+        bar.add(levelBox);
         bar.addSeparator();
         bar.add(ng);
         bar.addSeparator();
@@ -534,7 +545,7 @@ public class Sweeper extends JFrame {
         });
         clock.start();
 
-        start(16, 30, 100);
+        start(LEVELS[DEFAULT_LEVEL][0], LEVELS[DEFAULT_LEVEL][1], LEVELS[DEFAULT_LEVEL][2]);
         setSize(1180, 780);
         setLocationRelativeTo(null);
     }
@@ -650,6 +661,9 @@ public class Sweeper extends JFrame {
             boolean changed = (next != cell);
             cell = next;
             centre();
+            // 字号跟着格子走：极限档 30×40 的格子只有 22 px，固定 17 px 的数字会和小字叠在一起
+            numFont = new Font("SansSerif", Font.BOLD, Math.max(11, Math.round(cell * 0.46f)));
+            smallFont = new Font("SansSerif", Font.PLAIN, Math.max(7, Math.round(cell * 0.26f)));
             if (changed) {
                 Dimension want = new Dimension(C*cell + 2*pad, R*cell + 2*pad);
                 if (!want.equals(getPreferredSize())) { setPreferredSize(want); revalidate(); }
@@ -806,8 +820,11 @@ public class Sweeper extends JFrame {
         final String shot = args.length >= 2 && args[0].equals("shot") ? args[1] : null;
         // 第三个参数可选：提示档位 0=精简 1=标准 2=全部。截图核对不同档位时用。
         final int density = args.length >= 3 ? Integer.parseInt(args[2]) : -1;
+        // 第四个参数可选：难度 0=初级 1=中级 2=高级。
+        final int level = args.length >= 4 ? Integer.parseInt(args[3]) : -1;
         SwingUtilities.invokeLater(() -> {
             Sweeper f = new Sweeper();
+            if (level >= 0 && level < LEVELS.length) f.levelBox.setSelectedIndex(level);
             if (density >= 0 && density <= 2) f.densityBox.setSelectedIndex(density);
             f.setVisible(true);
             if (shot != null) {
