@@ -625,8 +625,11 @@ function drawHints(){
     const txt=DISP[h.key]+h.lb;
     ctx.font=`${Math.max(6,Math.round(s*0.28))}px system-ui, sans-serif`;
     ctx.textAlign='right';
-    if(h.exact){
-      ctx.textBaseline='alphabetic'; ctx.fillStyle=h.trivial ? '#8aa7bd' : '#2f6fa8';
+    // 「共有 n 颗」和「至少 0 颗」都放右下角：0 颗没有信息量，不该占右上角，
+    // 右上角留给真正的「至少 n 颗」。
+    if(h.exact || h.lb===0){
+      ctx.textBaseline='alphabetic';
+      ctx.fillStyle = h.exact ? (h.trivial ? '#8aa7bd' : '#2f6fa8') : '#b06a00';
       ctx.fillText(txt, x+s-2, y+s-2);
     } else {
       ctx.textBaseline='top'; ctx.fillStyle='#b06a00';

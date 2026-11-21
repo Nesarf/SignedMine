@@ -753,8 +753,11 @@ public class Sweeper extends JFrame {
                 int x = ox + c*cell, y = oy + r*cell;
                 String txt = DISP.get(h.key) + h.lb;
                 int tw = fm.stringWidth(txt);
-                if (h.exact) {
-                    g.setColor(new Color(0x2F, 0x6F, 0xA8));
+                // 「共有 n 颗」与「至少 0 颗」都放右下角：0 颗没有信息量，不该占右上角，
+                // 右上角留给真正的「至少 n 颗」。
+                if (h.exact || h.lb == 0) {
+                    if (h.exact) g.setColor(new Color(0x2F, 0x6F, 0xA8));
+                    else g.setColor(new Color(0xB0, 0x6A, 0x00));
                     g.drawString(txt, x + cell - tw - 3, y + cell - 4);
                 } else {
                     g.setColor(new Color(0xB0, 0x6A, 0x00));
