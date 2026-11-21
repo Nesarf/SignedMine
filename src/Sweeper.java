@@ -838,12 +838,16 @@ public class Sweeper extends JFrame {
             if (shot != null) {
                 javax.swing.Timer t = new javax.swing.Timer(900, ev -> {
                     try {
-                        BufferedImage img = new BufferedImage(f.getWidth(), f.getHeight(), BufferedImage.TYPE_INT_RGB);
+                        // 按内容面板的实际尺寸取图：窗口尺寸含标题栏与边框，
+                        // 而 paint 画的是内容面板，两者一差就在底部留一条黑边。
+                        java.awt.Container pane = f.getContentPane();
+                        int w = pane.getWidth(), h = pane.getHeight();
+                        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
                         Graphics2D g = img.createGraphics();
-                        f.getContentPane().paint(g);
+                        pane.paint(g);
                         g.dispose();
                         ImageIO.write(img, "png", new File(shot));
-                        System.out.println("saved " + shot + " " + img.getWidth() + "x" + img.getHeight());
+                        System.out.println("saved " + shot + " " + w + "x" + h);
                     } catch (Exception ex) { ex.printStackTrace(); }
                     System.exit(0);
                 });
