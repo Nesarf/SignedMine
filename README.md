@@ -1,17 +1,38 @@
 # SignedMine
 
-带「形状提示」的扫雷，纯桌面：一个 Swing 桌面版，一个单文件网页版（浏览器打开即玩）。
+带「形状提示」的扫雷。纯桌面：一个 Swing 桌面版，一个单文件网页版。
 
-规则还是经典扫雷，多出来的是提示：每个已翻开的数字格上最多挂一条形状提示，
-告诉你某个八邻域形状里有几颗雷，而且**这条提示恒成立**，不会随局面变化而失效。
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![java](https://img.shields.io/badge/java-17%2B-orange.svg)](src/Sweeper.java)
+[![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)]()
+[![play in browser](https://img.shields.io/badge/play-in%20browser-39c5bb.svg)](https://nesarf.github.io/SignedMine/)
 
-## 形态
+![全部档的盘面](assets/screenshot.png)
+
+不用下载也能玩：[**打开网页版**](https://nesarf.github.io/SignedMine/)
+
+## 什么是形状提示
+
+经典扫雷的每个数字格告诉你周围有几颗雷。这里多给一条：每个已翻开的数字格上挂着
+一个形状与一个小数字，说的是「这个形状里有几颗雷」。
+
+```text
+ 1 2 3
+ 4   5      右上角  至少 n 颗   该形状里至少有 n 颗雷
+ 6 7 8      右下角  共有 n 颗   该形状里恰好有 n 颗雷
+```
+
+可证明的区间是「形状内雷数落在 [下界, 剩余雷数]」：下界由「形状外未开邻格数」与
+「每个已翻开邻居的剩余雷数」两条推导取较大者，只有下界等于剩余雷数时才写「共有」。
+所以两种提示都**恒成立**，不会随局面变化而失效——这是这个游戏唯一特别的地方。
+
+## 两种形态
 
 | 形态 | 入口 | 说明 |
 | --- | --- | --- |
-| Swing 桌面版 | `src/Sweeper.java` | 单文件无依赖，主力形态 |
-| 单文件网页 | `index.html` | 浏览器直接打开，不需要服务器 |
-| 引擎 | `lib/core.js` | 发牌、形状提示、求援与求解 |
+| Swing 桌面版 | [`src/Sweeper.java`](src/Sweeper.java) | 单文件无依赖，`javac` 一下就能跑 |
+| 单文件网页 | [`index.html`](index.html) | 浏览器打开即玩，也托管在 Pages 上 |
+| 引擎 | [`lib/core.js`](lib/core.js) | 发牌、形状提示、求援与求解 |
 
 两种形态共用同一套算法：同一个 seed 会发出同一局、选出同一串提示（见「交叉验证」）。
 
@@ -24,33 +45,35 @@ javac -encoding UTF-8 src/Sweeper.java
 java Sweeper
 ```
 
-网页版：用浏览器打开 `index.html`，不需要服务器；也可以直接访问
-https://nesarf.github.io/SignedMine/ （GitHub Pages，从 `main` 的根目录发布）。
+网页版：浏览器打开 [`index.html`](index.html)，或者直接访问
+[nesarf.github.io/SignedMine](https://nesarf.github.io/SignedMine/)。
 
-## 形状提示
+## 操作
 
-八邻域编号（左上 1，右下 8）：
+| 动作 | 鼠标 | 键盘 |
+| --- | --- | --- |
+| 翻开 | 左键 | `空格` |
+| 插旗 | 右键 | `F` |
+| 连开周围 | 中键，或双击数字 | `空格`（光标在已翻开的数字格上） |
+| 移动光标 | — | 方向键 |
 
-```text
- 1 2 3
- 4   5
- 6 7 8
-```
+## 档位
 
-一个数字格上最多挂一条提示：
+| 档位 | 显示什么 |
+| --- | --- |
+| 精简 | 非平凡的精确值（0 < n < 形状格数） |
+| 标准 | 再加「至少 2 颗」的弱提示 |
+| 全部 | 每个数字格都挂一条，含「至少 0 颗」——`←0` 的意思就是这格暂时没有结论 |
+| 关闭 | 不显示提示，纯经典玩法 |
 
-```text
-右上角  至少 n 颗   该形状里至少有 n 颗雷
-右下角  共有 n 颗   该形状里恰好有 n 颗雷
-```
+「标准」档下没有结论的数字格是空的，「全部」档会逐格铺满：
 
-形状内雷数的可证明区间是 `[下界, 剩余雷数]`，下界由「形状外未开邻格数」与
-「每个已翻开邻居的剩余雷数」两条推导取较大者。只有下界等于剩余雷数时才写「共有」，
-所以两种提示都恒成立。四档显示、操作方式与已知限制都在 [GAME.md](GAME.md) 里。
+![标准档](assets/screenshot-standard.png)
 
 ## 引擎与内联副本
 
-网页版是单文件，所以引擎必须内联；于是「一份代码」变成「两份文本 + 一个生成器」：
+网页版是单文件（打开一个 html 就能玩），所以引擎必须内联；于是「一份代码」变成
+「两份文本 + 一个生成器」：
 
 ```sh
 node test/sync-inline.mjs          # 把 lib/core.js 生成进 index.html 的内联引擎段
@@ -79,7 +102,7 @@ javac -encoding UTF-8 -cp build-java -d build-java test/java/EngineProbe.java
 java -cp build-java EngineProbe 30        # 发牌成功率/耗时、提示自证、中局重算耗时
 java -cp build-java IncrementalProbe      # 增量补算出的提示在推进中是否仍恒成立
 java -cp build-java ExactDump             # 打印一条「精确值不成立」提示的中间量
-java -cp build-java Sweeper shot out.png  # 无头截图，顺带确认界面能起来
+java -cp build-java Sweeper shot out.png 2  # 无头截图，第三个参数是档位
 ```
 
 ## 交叉验证
@@ -117,7 +140,8 @@ node build-portable.mjs --out D:\dist
 SignedMine/
   lib/core.js             引擎
   src/Sweeper.java        Swing 桌面版
-  index.html        单文件网页版
+  index.html              单文件网页版
+  assets/                 README 用的截图
   test/                   回归脚本、Java 探测（test/java/）、行为基线
   packaging/              便携包里的说明文件
   build-portable.mjs      便携包打包脚本
