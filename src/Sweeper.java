@@ -553,13 +553,19 @@ public class Sweeper extends JFrame {
     void startAgain() { start(R, C, M); }
 
     String bestKey(){ return "best_" + R + "x" + C + "_" + M; }
+    // 用明确的节点名，不依赖 userNodeForPackage：默认包会落到 /<unnamed> 这种不好查的路径。
+    static Preferences prefs(){ return Preferences.userRoot().node("SignedMine"); }
     double bestSeconds(){
-        try { return Preferences.userNodeForPackage(Sweeper.class).getDouble(bestKey(), 0); }
+        try { return prefs().getDouble(bestKey(), 0); }
         catch (Exception e) { return 0; }
     }
     void saveBest(double v){
-        try { Preferences.userNodeForPackage(Sweeper.class).putDouble(bestKey(), v); }
-        catch (Exception e) { }
+        // putDouble 只写内存，flush 才落盘：不 flush 时进程被强杀就拿不到成绩。
+        try {
+            Preferences p = prefs();
+            p.putDouble(bestKey(), v);
+            p.flush();
+        } catch (Exception e) { }
     }
 
     void describeCell(int i) {
