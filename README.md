@@ -94,15 +94,33 @@ node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 
 当前基线：3 档 × 200 个 seed = 600 条，四项全等。
 
+## 打包便携版
+
+```sh
+node build-portable.mjs          # 产物在 build-portable/（已进 .gitignore）
+node build-portable.mjs --out D:\dist
+```
+
+需要 JDK 17+，`javac` / `jar` / `jpackage` 在 PATH 上。产出两个东西：
+
+- `dist/SignedMine/` —— 目录形态，双击 `SignedMine.exe` 即可，运行时在 `runtime/` 里
+- `SignedMine-<版本>-win-x64-portable.zip` —— 压缩包，解压即用
+
+运行时只带 `java.base` / `java.datatransfer` / `java.xml` / `java.prefs` / `java.desktop`
+五个模块，从完整 JRE 的 128 MB 压到 42 MB 左右。少一个模块 Swing 就起不来，
+所以这是按「够用」取的，不是按「尽量小」。
+
 ## 目录
 
 ```text
 SignedMine/
-  lib/core.js        引擎
-  src/Sweeper.java   Swing 桌面版
-  web/sweeper.html   单文件网页版
-  test/              回归脚本、Java 探测（test/java/）、行为基线
-  GAME.md            玩法、提示语义、档位、操作、测试、已知限制
+  lib/core.js             引擎
+  src/Sweeper.java        Swing 桌面版
+  web/sweeper.html        单文件网页版
+  test/                   回归脚本、Java 探测（test/java/）、行为基线
+  packaging/              便携包里的说明文件
+  build-portable.mjs      便携包打包脚本
+  GAME.md                 玩法、提示语义、档位、操作、测试、已知限制
 ```
 
 ## 许可证
