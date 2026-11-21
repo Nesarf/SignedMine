@@ -11,10 +11,17 @@ import java.util.*;
 public class CrossProbe {
     public static void main(String[] args) {
         int[][] cases = {{9, 9, 10}, {16, 16, 40}, {16, 30, 100}};
-        int[] seeds = {1, 2, 3, 7, 12345, 999999, 20261015};
-        if (args.length > 0) {
+        int[] seeds;
+        if (args.length >= 2 && args[0].equals("--bulk")) {
+            // 与 test/cross.mjs 的 --bulk 同一套 seed 生成规则
+            int n = Integer.parseInt(args[1]);
+            seeds = new int[n];
+            for (int i = 0; i < n; i++) seeds[i] = (i * 7919 + 12345) % 1000000;
+        } else if (args.length > 0) {
             seeds = new int[args.length];
             for (int i = 0; i < args.length; i++) seeds[i] = Integer.parseInt(args[i]);
+        } else {
+            seeds = new int[]{1, 2, 3, 7, 12345, 999999, 20261015};
         }
         StringBuilder sb = new StringBuilder();
         for (int[] lv : cases) {

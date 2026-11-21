@@ -136,13 +136,15 @@ java -cp build-java Sweeper shot out.png  # 无头截图，顺带确认界面能
 ```
 
 两套实现共用同一支随机数（mulberry32），所以同一个 seed 必须发出同一局。
-交叉验证就是这么做的：
+交叉验证就是这么做的，`--bulk N` 生成 N 个双方一致的 seed：
 
 ```sh
-java -cp build-java CrossProbe | Out-File -Encoding utf8 build-java/cross-java.jsonl
-node test/cross.mjs | Out-File -Encoding utf8 build-java/cross-js.jsonl
+java -cp build-java CrossProbe --bulk 200 | Out-File -Encoding utf8 build-java/cross-java.jsonl
+node test/cross.mjs --bulk 200 | Out-File -Encoding utf8 build-java/cross-js.jsonl
 node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
 ```
+
+当前基线：3 档 × 200 个 seed = 600 条，四项全部一致。
 
 ## 已知限制
 
@@ -153,7 +155,8 @@ node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
   （`build` 的 stall 判定）。高级档单次成功率约 2%，`deal` 靠重试兜到 200 局零失败。
 - `src/saolei.py` / `src/ui_sweeper.py` / `src/sweeper_core.py` 是早期 Python 实现，
   提示逻辑仍包含旧的上界推断，**可能与网页版结论不同**，仅作算法参考，不再同步。
-- `src/Sweeper.java` 与 `lib/core.js` 共用同一支随机数（mulberry32）与同一套上下界判定，
-  所以同一个 seed 会发出同一局、选出同一串形状提示；`test/cross-check.mjs` 覆盖 21 条用例
-  （ok / 雷位 / 开局局面 / 提示序列）。它仍是独立的 Swing 单文件，不参与
-  `test/sync-inline.mjs` 的生成，一致性靠这条交叉验证守着。
+- `src/Sweeper.java` 与 `lib/core.js` 共用同一支随机数（mulberry32）、同一套上下界判定，
+  并且都按格号升序遍历，所以同一个 seed 会发出同一局、选出同一串形状提示。
+  `test/cross-check.mjs` 当前覆盖 3 档 × 200 个 seed = 600 条用例
+  （ok / 雷位 / 开局局面 / 提示序列四项全等）。它仍是独立的 Swing 单文件，
+  不参与 `test/sync-inline.mjs` 的生成，一致性靠这条交叉验证守着。
