@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { engineText, patchedHtml } from './sync-inline.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HTML = path.join(root, 'web', 'sweeper.html');
+const HTML = path.join(root, 'index.html');
 const html = fs.readFileSync(HTML, 'utf8');
 
 const blocks = html.split('<script>').slice(1).map((s) => s.split('</script>')[0]);

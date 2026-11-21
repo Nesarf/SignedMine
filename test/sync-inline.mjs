@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const CORE = path.join(root, 'lib', 'core.js');
-const HTML = path.join(root, 'web', 'sweeper.html');
+const HTML = path.join(root, 'index.html');
 
 export const BEGIN = '// ===== ENGINE BEGIN：由 lib/core.js 生成，勿手改（node test/sync-inline.mjs）=====';
 export const END = '// ===== ENGINE END =====';

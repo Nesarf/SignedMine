@@ -2,11 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#e8eef4">
 <title>扫雷 · 形状提示</title>
-<link rel="manifest" href='data:application/manifest+json,{"name":"扫雷 · 形状提示","short_name":"扫雷","display":"standalone","start_url":".","background_color":"#e8eef4","theme_color":"#dde7f0"}'>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; overflow: hidden; padding-top: env(safe-area-inset-top, 0px); background: #e8eef4; color: #22323f;
@@ -68,7 +66,7 @@
   </div>
 </header>
 <div id="wrap"><canvas id="board"></canvas></div>
-<div id="msg">点格子翻开，长按插旗；点已翻开的数字可以连开周围</div>
+<div id="msg">左键翻开，右键插旗；方向键移动 · 空格翻开 · F 插旗</div>
 <script>
 // ===== ENGINE BEGIN：由 lib/core.js 生成，勿手改（node test/sync-inline.mjs）=====
 // 扫雷引擎（JS）：发牌、形状提示、求援与求解。
@@ -474,7 +472,7 @@ let hintMap = new Map();
 let startedAt=0, running=false, timer=null;
 // draw() 里就要用到这两个高亮格，声明放在所有绘制函数之前（let 有暂时性死区，
 // 万一哪天出现首帧同步绘制，写在下面会直接抛错）。
-let hintCell = -1, shapeCell = -1;
+let hintCell = -1, shapeCell = -1, cursor = -1;
 
 function level(){ const v=document.getElementById('level').value.split(',').map(Number); return v; }
 function density(){ return Number(document.getElementById('density').value); }
@@ -522,9 +520,10 @@ function newGame(){
   hintMap = new Map();
   for(const h of shapeHints(board)) hintMap.set(h.i, h);   // 发牌时就把开局能算的全算好
   weak = [...hintMap.values()];
+  cursor = -1;
   startedAt = Date.now(); running = true;
   layout(); draw(); tick();
-  msg.textContent = '点格子翻开，长按插旗；点已翻开的数字连开周围';
+  msg.textContent = '左键翻开，右键插旗；方向键移动 · 空格翻开 · F 插旗';
   }, 30);
 }
 
@@ -589,6 +588,14 @@ function draw(){
     const [hr,hc]=board.RC(hintCell);
     ctx.strokeStyle='#ffb300'; ctx.lineWidth=Math.max(2,s*0.10);
     ctx.strokeRect(pad+hc*s+1, pad+hr*s+1, s-2, s-2);
+  }
+  if(cursor>=0){
+    // 键盘光标：虚线框，与「求援」的黄框、形状高亮的橙框都区分开
+    const [cr,cc]=board.RC(cursor);
+    ctx.strokeStyle='#1f6feb'; ctx.lineWidth=Math.max(2,s*0.09);
+    ctx.setLineDash([4,3]);
+    ctx.strokeRect(pad+cc*s+1.5, pad+cr*s+1.5, s-3, s-3);
+    ctx.setLineDash([]);
   }
   drawHints();
   if(board.dead){
@@ -885,6 +892,32 @@ document.getElementById('density').onchange=()=>draw();
 window.addEventListener('resize',()=>{ setTimeout(()=>{ layout(); draw(); }, 120); });
 window.addEventListener('orientationchange',()=>{ setTimeout(()=>{ layout(); draw(); }, 200); });
 newGame();
+
+// 桌面键盘：方向键移动光标，空格翻开（已翻开的数字格则连开周围），F 插旗。
+// 触屏那套手势原样保留，两条输入路径互不干扰。
+window.addEventListener('keydown', ev=>{
+  if(!board) return;
+  const k=ev.key;
+  const arrow = k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight';
+  if(!arrow && k!==' ' && k!=='Enter' && k!=='f' && k!=='F') return;
+  if(cursor<0){ cursor = board.I(Math.floor(R/2), Math.floor(C/2)); ev.preventDefault(); draw(); return; }
+  if(k===' '||k==='Enter'){
+    ev.preventDefault();
+    if(board.dead) return;
+    if(board.rev.has(cursor)) chordAt(cursor); else openAt(cursor);
+    return;
+  }
+  if(k==='f'||k==='F'){ ev.preventDefault(); toggleFlagAt(cursor); return; }
+  ev.preventDefault();
+  const [r,c]=board.RC(cursor);
+  let nr=r, nc=c;
+  if(k==='ArrowUp') nr=Math.max(0,r-1);
+  else if(k==='ArrowDown') nr=Math.min(R-1,r+1);
+  else if(k==='ArrowLeft') nc=Math.max(0,c-1);
+  else nc=Math.min(C-1,c+1);
+  cursor = board.I(nr,nc);
+  draw();
+});
 </script>
 </body>
 </html>

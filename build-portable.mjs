@@ -53,7 +53,7 @@ run('jpackage', [
 ]);
 
 fs.mkdirSync(path.join(app, 'web'), { recursive: true });
-fs.copyFileSync(path.join(root, 'web', 'sweeper.html'), path.join(app, 'web', 'sweeper.html'));
+fs.copyFileSync(path.join(root, 'index.html'), path.join(app, 'web', 'sweeper.html'));
 fs.copyFileSync(path.join(root, 'packaging', 'README-portable.txt'), path.join(app, 'README.txt'));
 
 const zip = path.join(outDir, `SignedMine-${version}-win-x64-portable.zip`);

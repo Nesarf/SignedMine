@@ -10,7 +10,7 @@
 | 形态 | 入口 | 说明 |
 | --- | --- | --- |
 | Swing 桌面版 | `src/Sweeper.java` | 单文件无依赖，主力形态 |
-| 单文件网页 | `web/sweeper.html` | 浏览器直接打开，不需要服务器 |
+| 单文件网页 | `index.html` | 浏览器直接打开，不需要服务器 |
 | 引擎 | `lib/core.js` | 发牌、形状提示、求援与求解 |
 
 两种形态共用同一套算法：同一个 seed 会发出同一局、选出同一串提示（见「交叉验证」）。
@@ -24,7 +24,8 @@ javac -encoding UTF-8 src/Sweeper.java
 java Sweeper
 ```
 
-网页版：用浏览器打开 `web/sweeper.html`，不需要服务器。
+网页版：用浏览器打开 `index.html`，不需要服务器；也可以直接访问
+https://nesarf.github.io/SignedMine/ （GitHub Pages，从 `main` 的根目录发布）。
 
 ## 形状提示
 
@@ -52,7 +53,7 @@ java Sweeper
 网页版是单文件，所以引擎必须内联；于是「一份代码」变成「两份文本 + 一个生成器」：
 
 ```sh
-node test/sync-inline.mjs          # 把 lib/core.js 生成进 web/sweeper.html 的内联引擎段
+node test/sync-inline.mjs          # 把 lib/core.js 生成进 index.html 的内联引擎段
 node test/sync-inline.mjs --check  # 只比对，不一致时退出码 1
 ```
 
@@ -116,7 +117,7 @@ node build-portable.mjs --out D:\dist
 SignedMine/
   lib/core.js             引擎
   src/Sweeper.java        Swing 桌面版
-  web/sweeper.html        单文件网页版
+  index.html        单文件网页版
   test/                   回归脚本、Java 探测（test/java/）、行为基线
   packaging/              便携包里的说明文件
   build-portable.mjs      便携包打包脚本

@@ -4,7 +4,7 @@
 
 | 路径 | 作用 |
 | --- | --- |
-| `web/sweeper.html` | 单文件网页版（HTML + CSS + JS），浏览器直接打开 |
+| `index.html` | 单文件网页版（HTML + CSS + JS），浏览器直接打开 |
 | `lib/core.js` | 引擎：发牌、形状提示、求援、求解 |
 | `src/Sweeper.java` | Swing 桌面版，单文件无依赖，已与 JS 引擎同一口径 |
 | `test/` | 回归与性能脚本，见下方「测试」 |
@@ -15,7 +15,7 @@
 于是「一份代码」变成「两份文本 + 一个生成器」：
 
 ```sh
-node test/sync-inline.mjs          # 把 lib/core.js 生成进 web/sweeper.html 的内联引擎段
+node test/sync-inline.mjs          # 把 lib/core.js 生成进 index.html 的内联引擎段
 node test/sync-inline.mjs --check  # 只比对，不一致时退出码 1
 ```
 
