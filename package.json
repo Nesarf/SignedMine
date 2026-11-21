@@ -1,6 +1,6 @@
 {
   "name": "signedmine",
-  "version": "0.3.0",
+  "version": "0.3.25",
   "private": true,
   "type": "module",
   "description": "Minesweeper with shape hints: a Swing desktop build and a single-file web build",
