@@ -11,6 +11,10 @@ public class Sweeper extends JFrame {
     static final Map<String,int[]> SHAPES = new LinkedHashMap<>();
     static final Map<String,String> DISP = new LinkedHashMap<>();
     static final int[][] OFF = {{0,0},{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};
+    // ± / ∓ 的格子按符号笔画取，不是「上下两整行」：
+    //   ± = 加号（2-4-5-7）在上、减号（6-7-8）在下，并起来 245678；
+    //   ∓ = 上下镜像：减号（1-2-3）在上、加号（2-4-5-7）在下，即 123457。
+    // 与 lib/core.js 的 SHAPES 必须逐项一致，改一处就要改另一处。
     static {
         SHAPES.put("up",new int[]{1,2,3});        DISP.put("up","↑");
         SHAPES.put("down",new int[]{6,7,8});      DISP.put("down","↓");
@@ -29,7 +33,7 @@ public class Sweeper extends JFrame {
         SHAPES.put("bs",new int[]{1,8});          DISP.put("bs","╲");
         SHAPES.put("fs",new int[]{3,6});          DISP.put("fs","╱");
         SHAPES.put("neq",new int[]{2,4,5,7});     DISP.put("neq","≠");
-        SHAPES.put("pm",new int[]{1,2,3,6,7,8});  DISP.put("pm","±");
+        SHAPES.put("pm",new int[]{2,4,5,6,7,8});  DISP.put("pm","±");
         SHAPES.put("mp",new int[]{1,2,3,4,5,7});  DISP.put("mp","∓");
         SHAPES.put("corner",new int[]{1,2,3,4});  DISP.put("corner","⌐");
         SHAPES.put("tf",new int[]{2,6,8});        DISP.put("tf","∴");

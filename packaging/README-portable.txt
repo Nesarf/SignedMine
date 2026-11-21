@@ -1,4 +1,4 @@
-SignedMine 0.3.25 便携版（Windows x64）
+SignedMine 0.3.26 便携版（Windows x64）
 =====================================
 
 双击 SignedMine.exe 开始。
