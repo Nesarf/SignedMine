@@ -376,17 +376,22 @@ public class Sweeper extends JFrame {
     static int R = 16, C = 30, M = 100;
     static String mode = "高级 16×30 · 100 雷";
 
-    // 难度梯度：密度都在 20% 上下，实测这些都能稳定发牌（见 README 的交叉验证）。
-    // 密度再往 23% 以上走，单次 build 的成功率会掉到一半以下，发牌要重试很久。
+    // 24 档难度，密度 12%~21%。最后三档是 2500 格以上的大图（2520 / 2500 / 3000 格），
+    // 一屏放不下，靠滚动看。每档实测 20 局零失败；密度再往 23% 以上走，
+    // 单次 build 的成功率会掉到一半以下，发牌要重试很久。
     static final int[][] LEVELS = {
-        {6, 6, 5}, {9, 9, 10}, {12, 12, 22}, {16, 16, 40},
-        {16, 24, 70}, {16, 30, 100}, {20, 30, 120}, {30, 40, 240}
+        {5, 5, 3}, {6, 6, 5}, {7, 7, 7}, {8, 8, 9}, {9, 9, 10}, {10, 10, 14},
+        {12, 12, 20}, {12, 12, 26}, {14, 14, 30}, {16, 16, 40}, {16, 16, 51}, {16, 20, 60},
+        {16, 24, 70}, {16, 30, 99}, {16, 30, 100}, {20, 20, 80}, {20, 30, 120}, {24, 30, 145},
+        {24, 36, 170}, {30, 30, 190}, {30, 40, 240}, {40, 63, 500}, {50, 50, 500}, {60, 50, 600}
     };
     static final String[] LEVEL_NAMES = {
-        "迷你 6×6 · 5 雷", "初级 9×9 · 10 雷", "入门 12×12 · 22 雷", "中级 16×16 · 40 雷",
-        "高级 16×24 · 70 雷", "专家 16×30 · 100 雷", "超大 20×30 · 120 雷", "极限 30×40 · 240 雷"
+        "5×5 · 3", "6×6 · 5", "7×7 · 7", "8×8 · 9", "9×9 · 10", "10×10 · 14",
+        "12×12 · 20", "12×12 · 26", "14×14 · 30", "16×16 · 40", "16×16 · 51", "16×20 · 60",
+        "16×24 · 70", "16×30 · 99", "16×30 · 100", "20×20 · 80", "20×30 · 120", "24×30 · 145",
+        "24×36 · 170", "30×30 · 190", "30×40 · 240", "40×63 · 500", "50×50 · 500", "60×50 · 600"
     };
-    static final int DEFAULT_LEVEL = 5;
+    static final int DEFAULT_LEVEL = 14;          // 16×30 · 100
 
     // 只取 n 最大、且还没用过的那一条；同 n 时保留先出现的（与「按 n 稳定降序取首个」等价）。
     static Hint pickCandidate(ArrayList<Hint> cands, HashSet<Integer> used) {
@@ -534,7 +539,14 @@ public class Sweeper extends JFrame {
         bar.add(timeLabel);
         bar.add(new JLabel("  "));
         add(bar, BorderLayout.NORTH);
-        add(panel, BorderLayout.CENTER);
+        // 2500 格以上的盘面一屏放不下，放进滚动区；小盘面由 GridBagLayout 居中
+        JPanel holder = new JPanel(new GridBagLayout());
+        holder.add(panel);
+        JScrollPane scroll = new JScrollPane(holder);
+        scroll.setBorder(null);
+        scroll.getVerticalScrollBar().setUnitIncrement(24);
+        scroll.getHorizontalScrollBar().setUnitIncrement(24);
+        add(scroll, BorderLayout.CENTER);
         add(status, BorderLayout.SOUTH);
 
         clock = new javax.swing.Timer(100, e -> {
@@ -653,26 +665,23 @@ public class Sweeper extends JFrame {
             });
         }
         void relayout() {
-            int availW = getWidth() > 0 ? getWidth() : 1180;
-            int availH = getHeight() > 0 ? getHeight() : 740;
+            // 可用横向空间：优先看滚动视口，还没显示时退回设计宽度
+            int availW = 1180;
+            java.awt.Container p = getParent();
+            if (p != null && p.getWidth() > 0) availW = p.getWidth();
             int cw = (availW - 2*pad) / Math.max(C, 1);
-            int ch = (availH - 2*pad) / Math.max(R, 1);
-            int next = Math.max(18, Math.min(40, Math.min(cw, ch)));
+            // 下限放到 14：50×50 这种 2500 格的盘面靠滚动看，不靠缩到看不清
+            int next = Math.max(14, Math.min(34, cw));
             boolean changed = (next != cell);
             cell = next;
-            centre();
-            // 字号跟着格子走：极限档 30×40 的格子只有 22 px，固定 17 px 的数字会和小字叠在一起
-            numFont = new Font("SansSerif", Font.BOLD, Math.max(11, Math.round(cell * 0.46f)));
+            ox = pad; oy = pad;
+            // 字号跟着格子走：极限档的格子只有二十几 px，固定 17 px 的数字会和小字叠在一起
+            numFont = new Font("SansSerif", Font.BOLD, Math.max(10, Math.round(cell * 0.46f)));
             smallFont = new Font("SansSerif", Font.PLAIN, Math.max(7, Math.round(cell * 0.26f)));
             if (changed) {
                 Dimension want = new Dimension(C*cell + 2*pad, R*cell + 2*pad);
                 if (!want.equals(getPreferredSize())) { setPreferredSize(want); revalidate(); }
             }
-        }
-        // 棋盘不去顶格：按面板实际尺寸居中，窗口放大时空白留在四周而不是全堆在右下。
-        void centre() {
-            ox = Math.max(pad, (getWidth() - C*cell) / 2);
-            oy = Math.max(pad, (getHeight() - R*cell) / 2);
         }
         void chord(int i) {
             if (board == null || board.dead || !board.rev[i]) return;

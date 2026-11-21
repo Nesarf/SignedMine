@@ -7,7 +7,7 @@
 [![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)]()
 [![play in browser](https://img.shields.io/badge/play-in%20browser-39c5bb.svg)](https://nesarf.github.io/SignedMine/)
 
-![专家档，全部提示](assets/shot-expert-all.png)
+![16×30 · 100 雷，全部提示](assets/screenshot.png)
 
 不用下载也能玩：[**打开网页版**](https://nesarf.github.io/SignedMine/)
 
@@ -28,116 +28,30 @@
 
 ## 难度
 
-| 难度 | 盘面 | 雷 | 密度 |
-| --- | --- | --- | --- |
-| 迷你 | 6×6 | 5 | 13.9% |
-| 初级 | 9×9 | 10 | 12.3% |
-| 入门 | 12×12 | 22 | 15.3% |
-| 中级 | 16×16 | 40 | 15.6% |
-| 高级 | 16×24 | 70 | 18.2% |
-| 专家 | 16×30 | 100 | 20.8% |
-| 超大 | 20×30 | 120 | 20.0% |
-| 极限 | 30×40 | 240 | 20.0% |
+24 档，密度从 12% 到 21%，地块从 25 到 3000。每档实测 20 局零失败。
 
-格距按窗口宽高取小值算，棋盘在面板内居中，字号跟着格子走，窗口缩放即时重排。
+| 盘面 | 雷 | 密度 | 地块 | 盘面 | 雷 | 密度 | 地块 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 5×5 | 3 | 12.0% | 25 | 16×24 | 70 | 18.2% | 384 |
+| 6×6 | 5 | 13.9% | 36 | 16×30 | 99 | 20.6% | 480 |
+| 7×7 | 7 | 14.3% | 49 | 16×30 | 100 | 20.8% | 480 |
+| 8×8 | 9 | 14.1% | 64 | 20×20 | 80 | 20.0% | 400 |
+| 9×9 | 10 | 12.3% | 81 | 20×30 | 120 | 20.0% | 600 |
+| 10×10 | 14 | 14.0% | 100 | 24×30 | 145 | 20.1% | 720 |
+| 12×12 | 20 | 13.9% | 144 | 24×36 | 170 | 19.7% | 864 |
+| 12×12 | 26 | 18.1% | 144 | 30×30 | 190 | 21.1% | 900 |
+| 14×14 | 30 | 15.3% | 196 | 30×40 | 240 | 20.0% | 1200 |
+| 16×16 | 40 | 15.6% | 256 | 40×63 | 500 | 19.8% | 2520 |
+| 16×16 | 51 | 19.9% | 256 | 50×50 | 500 | 20.0% | 2500 |
+| 16×20 | 60 | 18.8% | 320 | 60×50 | 600 | 20.0% | 3000 |
 
-### 从最小到最大
+最后三档是 2500 格以上的大图，一屏放不下，棋盘放在滚动区里看；
+50×50 的发牌要 2.5 秒左右（界面上会先显示「生成中…」）。
 
-迷你 6×6 · 5 雷：
+密度再往 23% 以上走（例如 20×30 · 140），单次 build 的成功率会掉到一半以下，
+发牌要重试很久，所以没有收入。
 
-![迷你 6×6](assets/shot-mini-all.png)
-
-专家 16×30 · 100 雷：
-
-![专家 16×30](assets/shot-expert-all.png)
-
-极限 30×40 · 240 雷：
-
-![极限 30×40](assets/shot-extreme-standard.png)
-
-### 二十四张
-
-八档难度 × 三档提示，全部从桌面版实拍。
-
-<details>
-<summary>迷你 6×6 · 5 雷</summary>
-
-<p>
-<img src="assets/shot-mini-concise.png" width="32%" alt="精简">
-<img src="assets/shot-mini-standard.png" width="32%" alt="标准">
-<img src="assets/shot-mini-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>初级 9×9 · 10 雷</summary>
-
-<p>
-<img src="assets/shot-easy-concise.png" width="32%" alt="精简">
-<img src="assets/shot-easy-standard.png" width="32%" alt="标准">
-<img src="assets/shot-easy-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>入门 12×12 · 22 雷</summary>
-
-<p>
-<img src="assets/shot-casual-concise.png" width="32%" alt="精简">
-<img src="assets/shot-casual-standard.png" width="32%" alt="标准">
-<img src="assets/shot-casual-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>中级 16×16 · 40 雷</summary>
-
-<p>
-<img src="assets/shot-medium-concise.png" width="32%" alt="精简">
-<img src="assets/shot-medium-standard.png" width="32%" alt="标准">
-<img src="assets/shot-medium-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>高级 16×24 · 70 雷</summary>
-
-<p>
-<img src="assets/shot-hard-concise.png" width="32%" alt="精简">
-<img src="assets/shot-hard-standard.png" width="32%" alt="标准">
-<img src="assets/shot-hard-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>专家 16×30 · 100 雷</summary>
-
-<p>
-<img src="assets/shot-expert-concise.png" width="32%" alt="精简">
-<img src="assets/shot-expert-standard.png" width="32%" alt="标准">
-<img src="assets/shot-expert-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>超大 20×30 · 120 雷</summary>
-
-<p>
-<img src="assets/shot-huge-concise.png" width="32%" alt="精简">
-<img src="assets/shot-huge-standard.png" width="32%" alt="标准">
-<img src="assets/shot-huge-all.png" width="32%" alt="全部">
-</p>
-</details>
-
-<details>
-<summary>极限 30×40 · 240 雷</summary>
-
-<p>
-<img src="assets/shot-extreme-concise.png" width="32%" alt="精简">
-<img src="assets/shot-extreme-standard.png" width="32%" alt="标准">
-<img src="assets/shot-extreme-all.png" width="32%" alt="全部">
-</p>
-</details>
+格距按可用宽度算，字号跟着格子走，小盘面居中、大盘面滚动，窗口缩放即时重排。
 
 ## 档位
 
@@ -146,14 +60,6 @@
 | 精简 | 非平凡的精确值（0 < n < 形状格数） |
 | 标准 | 再加「至少 2 颗」的弱提示 |
 | 全部 | 每个数字格都挂一条，含「至少 0 颗」——`←0` 的意思就是这格暂时没有结论 |
-
-专家档上三档的差别：
-
-<p>
-<img src="assets/shot-expert-concise.png" width="32%" alt="精简">
-<img src="assets/shot-expert-standard.png" width="32%" alt="标准">
-<img src="assets/shot-expert-all.png" width="32%" alt="全部">
-</p>
 
 ## 两种形态
 
@@ -218,7 +124,7 @@ javac -encoding UTF-8 -cp build-java -d build-java test/java/EngineProbe.java
 java -cp build-java EngineProbe 30          # 发牌成功率/耗时、提示自证、中局重算耗时
 java -cp build-java IncrementalProbe        # 增量补算出的提示在推进中是否仍恒成立
 java -cp build-java ExactDump               # 打印一条「精确值不成立」提示的中间量
-java -cp build-java Sweeper shot out.png 2 5  # 截图：档位 2、难度 5
+java -cp build-java Sweeper shot out.png 2 15  # 截图：档位 2（全部）、难度 15（16×30·100）
 ```
 
 ## 交叉验证
@@ -267,11 +173,11 @@ SignedMine/
   lib/core.js             引擎
   src/Sweeper.java        Swing 桌面版
   index.html              单文件网页版
-  assets/                 24 张截图（8 档难度 × 3 档提示）
+  assets/screenshot.png   预览图
   test/                   回归脚本、Java 探测（test/java/）、行为基线
   packaging/              便携包里的说明文件
   build-portable.mjs      便携包打包脚本
-  GAME.md                 玩法、提示语义、档位、操作、测试、已知限制
+  GAME.md                 玩法、提示语义、难度、档位、操作、测试、已知限制
 ```
 
 ## 版本
