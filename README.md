@@ -82,6 +82,8 @@ node test/bench.mjs           # 发牌与中局重算的绝对耗时
 node test/deal-stats.mjs 200  # 发牌成功率与耗时分布
 node test/build-rate.mjs      # 单次 build 的成功率，决定重试次数
 node test/compare-orig.mjs    # 与仓库原始引擎（test/core-orig.mjs）逐项对比
+node test/cross.mjs           # 输出 JS 侧基线（与 Java 的 CrossProbe 同格式）
+node test/cross-check.mjs     # 两侧基线比对：ok / 雷位 / 开局局面 / 提示序列
 
 # Java 桌面版
 javac -encoding UTF-8 -d build-java src/Sweeper.java

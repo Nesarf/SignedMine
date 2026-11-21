@@ -60,12 +60,27 @@ public class Sweeper extends JFrame {
         return false;
     }
 
+    // 与 lib/core.js 的 makeRng 同一支算法（mulberry32），32 位溢出语义逐位对齐。
+    // 这样同一个 seed 在 Java 与 JS 里发出同一局，两边才能交叉验证而不是各测各的。
+    static final class Mulberry32 {
+        private int a;
+        Mulberry32(int seed){ a = seed; }
+        double next() {
+            a += 0x6D2B79F5;
+            int t = a;
+            t = (t ^ (t >>> 15)) * (t | 1);
+            t ^= t + (t ^ (t >>> 7)) * (t | 61);
+            return ((t ^ (t >>> 14)) & 0xFFFFFFFFL) / 4294967296.0;
+        }
+    }
+
     static class Board {
         int R, C, M, seed;
         boolean[] mine, rev, known, flag;
         boolean placed, dead;
         int[] num;
-        Random rng;
+        Mulberry32 rng;
+        boolean[] snapshot;        // 开局中心格翻开后的局面，发完牌要退回来
         int revN = 0;              // 已翻开格数：revCount 由每次 O(R*C) 变成 O(1)
         int[][] NB;                // 邻域表，构造时算好（旧版每次 nbs() 都 new 一个 ArrayList）
         int[][] SC;                // 形状格缓存，按 (格, 形状) 惰性填充
@@ -76,7 +91,7 @@ public class Sweeper extends JFrame {
             int n = R * C;
             mine = new boolean[n]; rev = new boolean[n]; known = new boolean[n]; flag = new boolean[n];
             num = new int[n];
-            rng = new Random(seed);
+            rng = new Mulberry32(seed);
             NB = new int[n][];
             for (int r = 0; r < R; r++) for (int c = 0; c < C; c++) {
                 int[] tmp = new int[8];
@@ -100,9 +115,9 @@ public class Sweeper extends JFrame {
             for (int r = 0; r < R; r++)
                 for (int c = 0; c < C; c++)
                     if (Math.max(Math.abs(r - sr), Math.abs(c - sc)) > 1) pool[k++] = I(r, c);
-            // 自己洗，省掉 Collections.shuffle 对 Integer 的装箱
+            // 与 lib/core.js 同一套洗牌：倒序 Fisher-Yates，j = floor(rng * (i+1))
             for (int i = k - 1; i > 0; i--) {
-                int j = rng.nextInt(i + 1);
+                int j = (int) (rng.next() * (i + 1));
                 int t = pool[i]; pool[i] = pool[j]; pool[j] = t;
             }
             for (int t = 0; t < M; t++) mine[pool[t]] = true;
@@ -400,35 +415,46 @@ public class Sweeper extends JFrame {
         return true;
     }
 
+    // 单次发牌，不做外层重试。lib/core.js 的 build() 与它逐位等价，
+    // 交叉验证（test/java/CrossProbe.java 对 test/cross.mjs）拿它当基准。
+    // 返回 null 表示这局加满提示也解不开；成功时 b.snapshot 是中心格翻开后的局面。
+    static Board buildOnce(int rows, int cols, int mines, int seed, ArrayList<Hint> hintsOut) {
+        Board b = new Board(rows, cols, mines, seed);
+        b.open(b.I(rows/2, cols/2));
+        b.snapshot = b.rev.clone();
+        ArrayList<Hint> hs = new ArrayList<>();
+        HashSet<Integer> usedKey = new HashSet<>();
+        boolean ok = false;
+        int stall = 0;
+        for (int k = 0; k < 80; k++) {
+            int revBefore = b.revN, knownBefore = 0;
+            for (boolean x : b.known) if (x) knownBefore++;
+            if (b.solve(hs)) { ok = true; break; }
+            int knownAfter = 0;
+            for (boolean x : b.known) if (x) knownAfter++;
+            // 加了提示还是没有任何推进，这局基本走不通，别再空转到八十轮
+            stall = (b.revN == revBefore && knownAfter == knownBefore) ? stall + 1 : 0;
+            if (stall >= 3) break;
+            Hint pick = pickCandidate(b.candidates(), usedKey);
+            if (pick == null) break;
+            hs.add(pick);
+            usedKey.add(pick.i * 64 + keyIndex(pick.key));
+        }
+        hintsOut.clear();
+        hintsOut.addAll(hs);
+        return ok ? b : null;
+    }
+
     static boolean newGame(int rows, int cols, int mines, int seed) {
         // 单次 build 的成功率：高级档约 2%，失败局现在很早就能判定，
         // 所以重试次数给足（200 局发牌零失败），代价只是极少数局面多等一会儿。
         for (int t = 0; t < 240; t++) {
-            Board b = new Board(rows, cols, mines, seed + t * 7919);
-            b.open(b.I(rows/2, cols/2));
-            boolean[] snap = b.rev.clone();
             ArrayList<Hint> hs = new ArrayList<>();
-            HashSet<Integer> usedKey = new HashSet<>();
-            boolean ok = false;
-            int stall = 0;
-            for (int k = 0; k < 80; k++) {
-                int revBefore = b.revN, knownBefore = 0;
-                for (boolean x : b.known) if (x) knownBefore++;
-                if (b.solve(hs)) { ok = true; break; }
-                int knownAfter = 0;
-                for (boolean x : b.known) if (x) knownAfter++;
-                // 加了提示还是没有任何推进，这局基本走不通，别再空转到八十轮
-                stall = (b.revN == revBefore && knownAfter == knownBefore) ? stall + 1 : 0;
-                if (stall >= 3) break;
-                Hint pick = pickCandidate(b.candidates(), usedKey);
-                if (pick == null) break;
-                hs.add(pick);
-                usedKey.add(pick.i * 64 + keyIndex(pick.key));
-            }
-            if (!ok) continue;
-            board = b; hints = hs; snapshot = snap;
+            Board b = buildOnce(rows, cols, mines, seed + t * 7919, hs);
+            if (b == null) continue;
+            board = b; hints = hs; snapshot = b.snapshot;
             R = rows; C = cols; M = mines;
-            board.rev = snap.clone();
+            board.rev = b.snapshot.clone();
             Arrays.fill(board.known, false);
             board.revN = 0;
             for (boolean x : board.rev) if (x) board.revN++;

@@ -58,13 +58,19 @@ adb install -r build/sweeper.apk
 「共有」只在形状覆盖该格全部未开邻格时给出（此时形状内雷数等于数字的剩余雷数），
 所以两种提示都恒成立，不会随局面变化而失效。
 
-形状内雷数的可证明区间是 `[剩余雷数 - 形状外未开邻格数, 剩余雷数]`：
+形状内雷数的可证明区间是 `[下界, 剩余雷数]`：
 
-- 下界够到形状格数 → 形状内全是雷（`hintEffect` 用它推进求解）；
-- 剩余雷数为 0 → 形状内全安全；
-- 其余情况只是「至少 n 颗」，**不构成任何安全结论**。
-  早期版本把「下界为 0」当成「全安全」，等于在求解器里朝雷上开，
-  高级档发牌因此反复空转（详见 `test/diag-candidates.mjs` 的输出）。
+- 下界取两条推导的较大者：`剩余雷数 - 形状外未开邻格数`，以及每个已翻开邻居给出的
+  `rest(q2) - (q2 的未开邻格里不在形状内的个数)`；
+- 下界够到未开格数 → 形状内全是雷；剩余雷数为 0 → 形状内全安全；
+- **下界等于剩余雷数**时才写「共有 n 颗」，否则只写「至少 n 颗」。
+
+两个旧口径都在这里出过错，现在都改掉了：
+
+- 把「下界为 0」当成「全安全」，等于在求解器里朝雷上开，高级档发牌因此反复空转；
+- 把 `rest(q2) - inner` 当成「形状外雷数下界」，但 q2 的邻域会伸出中心格邻域之外，
+  那部分既不在形状内也不在形状外，上界被压到与下界相等，判出假的「共有」。
+  Java 桌面版曾因此给出 9 条与真实雷位不符的提示（`test/java/ExactDump.java` 能打印中间量）。
 
 ## 档位
 
@@ -115,6 +121,7 @@ node test/bench.mjs           # 发牌与中局重算的绝对耗时
 node test/deal-stats.mjs 200  # 发牌成功率与耗时分布（p50 / p90 / p99）
 node test/build-rate.mjs      # 单次 build 的成功率，决定 deal 的重试次数
 node test/compare-orig.mjs    # 与仓库原始引擎（test/core-orig.mjs）逐项对比
+node test/cross-check.mjs     # 与 Java 实现交叉比对（先由下面两条生成基线）
 ```
 
 Java 桌面版（JDK 17+，产物进 `build-java/`，已列进 `.gitignore`）：
@@ -128,6 +135,15 @@ java -cp build-java ExactDump           # 打印一条「精确值不成立」�
 java -cp build-java Sweeper shot out.png  # 无头截图，顺带确认界面能起来
 ```
 
+两套实现共用同一支随机数（mulberry32），所以同一个 seed 必须发出同一局。
+交叉验证就是这么做的：
+
+```sh
+java -cp build-java CrossProbe | Out-File -Encoding utf8 build-java/cross-java.jsonl
+node test/cross.mjs | Out-File -Encoding utf8 build-java/cross-js.jsonl
+node test/cross-check.mjs   # 比 ok / 雷位 / 开局局面 / 提示序列
+```
+
 ## 已知限制
 
 - 新翻开的格子只做增量补算（新开格 + 邻居），整表重算只发生在「新局」和「刷新提示」。
@@ -137,5 +153,7 @@ java -cp build-java Sweeper shot out.png  # 无头截图，顺带确认界面能
   （`build` 的 stall 判定）。高级档单次成功率约 2%，`deal` 靠重试兜到 200 局零失败。
 - `src/saolei.py` / `src/ui_sweeper.py` / `src/sweeper_core.py` 是早期 Python 实现，
   提示逻辑仍包含旧的上界推断，**可能与网页版结论不同**，仅作算法参考，不再同步。
-- `src/Sweeper.java` 已按同一口径修正（上下界与严格推断）并有独立探测，
-  但它是 Swing 单文件，不参与 `test/sync-inline.mjs` 的生成，两边靠各自的测试守护。
+- `src/Sweeper.java` 与 `lib/core.js` 共用同一支随机数（mulberry32）与同一套上下界判定，
+  所以同一个 seed 会发出同一局、选出同一串形状提示；`test/cross-check.mjs` 覆盖 21 条用例
+  （ok / 雷位 / 开局局面 / 提示序列）。它仍是独立的 Swing 单文件，不参与
+  `test/sync-inline.mjs` 的生成，一致性靠这条交叉验证守着。
