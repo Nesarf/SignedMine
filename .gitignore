@@ -1,0 +1,14 @@
+# 构建产物
+*.class
+build/
+build-java/
+
+# 依赖与缓存
+node_modules/
+__pycache__/
+*.pyc
+
+# 杂项
+*.log
+.DS_Store
+Thumbs.db
