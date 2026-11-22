@@ -414,18 +414,6 @@ class Board {
   }
 }
 
-// 与「稳定降序排 n、再取第一个没用过」等价：同 n 时保留先出现的。
-function pickCandidate(cands, used){
-  let best=null, bestN=-1;
-  for(let t=0;t<cands.length;t++){
-    const c=cands[t];
-    if(c.n<=bestN) continue;
-    if(used.has(c.i*64+KEY_INDEX.get(c.key))) continue;
-    bestN=c.n; best=c;
-  }
-  return best;
-}
-
 function build(R,C,m,seed){
   const b=new Board(R,C,m,seed);
   b.open(b.I(Math.floor(R/2),Math.floor(C/2)));

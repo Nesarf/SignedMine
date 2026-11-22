@@ -469,17 +469,6 @@ public class Sweeper extends JFrame {
     };
     static final int DEFAULT_LEVEL = 14;          // 16×30 · 100
 
-    // 只取 n 最大、且还没用过的那一条；同 n 时保留先出现的（与「按 n 稳定降序取首个」等价）。
-    static Hint pickCandidate(ArrayList<Hint> cands, HashSet<Integer> used) {
-        Hint best = null; int bestN = -1;
-        for (Hint c : cands) {
-            if (c.n <= bestN) continue;
-            if (used.contains(c.i * 64 + keyIndex(c.key))) continue;
-            bestN = c.n; best = c;
-        }
-        return best;
-    }
-
     // 整表重算（新局 / 主动刷新时用）
     static void refreshAllWeak() {
         weakByCell = new Hint[R * C];
