@@ -460,8 +460,10 @@ function deal(R,C,m){
 //      旧口径只看到「在形状内」的那部分，于是把「两边都不在」的格子算进了形状外，
 //      上界被压到与下界相等，判出假的「精确值」。
 // 上界就是 base。只有 lb === base 才写「共有 n 颗」。
-// 「至少 0 颗」（非精确且 lb=0）不携带任何信息，这里直接不生成，盘面上不会出现。
-function shapeHintFor(b,q,s){
+// force=true 时，下界为 0、暂无可推结论的形状也保留（显示为符号加 0），
+// 这样每个数字格从发牌那一刻起就有符号，不会等周围翻开才冒出来。
+// 注意：这里的 0 表示「暂无可推结论」，绘制层只画淡色符号；右下角的 0 只来自精确结论。
+function shapeHintFor(b,q,s,force){
   const v=b.num(q); if(!v) return null;
   const nb=b.nbs(q);
   let base=v;
@@ -497,7 +499,7 @@ function shapeHintFor(b,q,s){
     }
     if(lb>unk) lb=unk;
     const exact=(lb===base);
-    if(!exact && lb<1) continue;    // 「至少 0 颗」不携带信息，不生成
+    if(!exact && lb<1 && !force) continue;    // 下界为 0 的形状默认不生成，force 时保留
     const score=(exact?200:0)+lb*100-unk;
     if(!best||score>best.score) best={score,key:KEYS[k],lb,exact,n:unk};
   }
@@ -506,7 +508,8 @@ function shapeHintFor(b,q,s){
     trivial:best.exact&&(best.lb===0||best.lb>=best.n)};
 }
 
-function shapeHints(b){
+// force=true 时每个已翻开的数字格都会得到一条提示（含下界为 0 的）。
+function shapeHints(b, force){
   // 只输出能严格证明的提示：
   //   下界够到未开格数 → 形状内全是雷
   //   剩余雷数为 0 → 形状内全安全
@@ -516,7 +519,7 @@ function shapeHints(b){
   const out=[], s=b.stateMap(), N=b.R*b.C;
   for(let q=0;q<N;q++){
     if(!b.rev.has(q)) continue;
-    const h=shapeHintFor(b,q,s);
+    const h=shapeHintFor(b,q,s,force);
     if(h) out.push(h);
   }
   return out;
@@ -524,12 +527,12 @@ function shapeHints(b){
 
 // 增量补算：只碰 dirty 里的格子，已经算过的提示一律不动（旧版每次翻格都全盘重算）。
 // dirty 的调用方契约：新翻开的格 + 它们的邻居。
-function topUpHints(b, hintMap, dirty){
+function topUpHints(b, hintMap, dirty, force){
   let added=0, s=null;
   for(const q of dirty){
     if(hintMap.has(q)||!b.rev.has(q)) continue;
     if(!s) s=b.stateMap();
-    const h=shapeHintFor(b,q,s);
+    const h=shapeHintFor(b,q,s,force);
     if(h){ hintMap.set(q,h); added++; }
   }
   return added;
@@ -592,7 +595,7 @@ function newGame(){
   if(!res){ msg.textContent='生成失败，再按一次新局'; return; }
   board = res.board; hints = res.hints;
   hintMap = new Map();
-  for(const h of shapeHints(board)) hintMap.set(h.i, h);   // 发牌时就把开局能算的全算好
+  for(const h of shapeHints(board, true)) hintMap.set(h.i, h);   // 发牌时就把开局能算的全算好
   weak = [...hintMap.values()];
   cursor = -1;
   startedAt = Date.now(); running = true;
@@ -689,29 +692,37 @@ function drawHints(){
     if(lvl===1 && (h.trivial || (!h.exact && h.lb<2))) continue; // 标准：再加「至少 2 颗」以上
     const [r,c]=board.RC(h.i);
     const x=pad+c*s, y=pad+r*s;
-    const txt=DISP[h.key]+h.lb;
     ctx.font=`${Math.max(6,Math.round(s*0.28))}px system-ui, sans-serif`;
     ctx.textAlign='right';
-    // 「共有 n 颗」放右下角；「至少 n 颗」放右上角。lb 为 0 的非精确提示不会出现。
+    // 右下角 = 「共有 n 颗」，右上角 = 「至少 n 颗」，两个角落各司其职。
+    // 下界为 0 的提示没有可写的数字：只画一个淡色符号，不进任何角落。
     if(h.exact){
       ctx.textBaseline='alphabetic';
       ctx.fillStyle=h.trivial ? '#8aa7bd' : '#2f6fa8';
-      ctx.fillText(txt, x+s-2, y+s-2);
-    } else {
+      ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-2);
+    } else if(h.lb>=1){
       ctx.textBaseline='top'; ctx.fillStyle='#b06a00';
-      ctx.fillText(txt, x+s-2, y+1.5);
+      ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+1.5);
+    } else {
+      ctx.textBaseline='alphabetic'; ctx.fillStyle='#aebfce';
+      ctx.fillText(DISP[h.key], x+s-2, y+s-2);
     }
     drawn.add(h.i);
   }
   for(const h of hints){
     if(drawn.has(h.i)||!board.rev.has(h.i)) continue;
-    // solve 用的提示集合里可能有「至少 0 颗」的条目，同样不画
-    if(!h.exact && h.lb===0) continue;
     const [r,c]=board.RC(h.i);
     const x=pad+c*s, y=pad+r*s;
     ctx.font=`${Math.max(7,Math.round(s*0.30))}px system-ui, sans-serif`;
-    ctx.textAlign='right'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#2f6fa8';
-    ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-2.5);
+    ctx.textAlign='right';
+    if(!h.exact && h.lb===0){
+      // 与 weak 同一口径：下界为 0 只画淡色符号
+      ctx.textBaseline='alphabetic'; ctx.fillStyle='#aebfce';
+      ctx.fillText(DISP[h.key], x+s-2, y+s-2.5);
+    } else {
+      ctx.textBaseline='alphabetic'; ctx.fillStyle='#2f6fa8';
+      ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-2.5);
+    }
     drawn.add(h.i);
   }
 }
@@ -736,7 +747,7 @@ function topUpAfter(before){
     for(const q of board.nbs(p)) dirty.push(q);
   }
   if(!dirty.length) return 0;
-  const added = topUpHints(board, hintMap, dirty);
+  const added = topUpHints(board, hintMap, dirty, true);
   if(added) weak = [...hintMap.values()];
   return added;
 }
@@ -788,7 +799,13 @@ function chordAt(i){
   let f=0; for(const p of board.nbs(i)) if(board.flag.has(p)) f++;
   if(f!==v){
     const t=weak.find(h=>h.i===i);
-    msg.textContent = t ? `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}：${t.exact?'共有':'至少'} ${DISP[t.key]}${t.lb} 颗` : `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}`;
+    if(t){
+      if(t.exact) msg.textContent = `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}：共有 ${DISP[t.key]}${t.lb} 颗`;
+      else if(t.lb>=1) msg.textContent = `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}：至少 ${DISP[t.key]}${t.lb} 颗`;
+      else msg.textContent = `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}：暂无可推结论`;
+    } else {
+      msg.textContent = `R${Math.floor(i/C)+1}C${i%C+1} 数字 ${v}`;
+    }
     return true;
   }
   snapshot();                       // 连开周围也是一步，撤销要能退回连开之前
@@ -891,7 +908,9 @@ cv.addEventListener('pointerup', ev=>{
     if(h){
       shapeCell = i;
       const cells = board.shapeCells(h.i, h.key).length;
-      msg.textContent = `${DISP[h.key]} 覆盖 ${cells} 格：${h.exact?'共有':'至少'} ${h.lb} 颗`;
+      if(h.exact) msg.textContent = `${DISP[h.key]} 覆盖 ${cells} 格：共有 ${h.lb} 颗`;
+      else if(h.lb>=1) msg.textContent = `${DISP[h.key]} 覆盖 ${cells} 格：至少 ${h.lb} 颗`;
+      else msg.textContent = `${DISP[h.key]} 覆盖 ${cells} 格：暂无可推结论`;
       draw();
       setTimeout(()=>{ shapeCell=-1; draw(); }, 2600);
       return;
@@ -942,7 +961,7 @@ document.getElementById('retip').onclick=()=>{
     flashHint(mv.cell, mv.mine ? '这一格确定是雷，长按插旗' : '有一格能确定安全（黄框）');
     return;
   }
-  weak = shapeHints(board);        // 卡住时按当前局面重算一次
+  weak = shapeHints(board, true);        // 卡住时按当前局面重算一次
   draw();
   mv = findMove();
   if(mv){
@@ -955,7 +974,7 @@ document.getElementById('retip').onclick=()=>{
 document.getElementById('refresh').onclick=()=>{
   if(!board||board.dead) return;
   hintMap = new Map();
-  for(const h of shapeHints(board)) hintMap.set(h.i, h);
+  for(const h of shapeHints(board, true)) hintMap.set(h.i, h);
   weak = [...hintMap.values()];
   draw();
   msg.textContent = '提示已按当前局面重算（共 ' + weak.length + ' 格）';

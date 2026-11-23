@@ -296,8 +296,9 @@ public class Sweeper extends JFrame {
         // 旧版把 rest(q2) - inner 直接当成「形状外雷数下界」，于是把「两边都不在」的那些格子
         // 算进了形状外，上界被压低到与下界相等，判出假的「精确值」——玩家照着推理会错。
         // 判定：lb == base 才算精确（此时形状内恰好 base 颗）。
-        // 「至少 0 颗」（非精确且 lb=0）不携带任何信息，这里直接不生成，盘面上不会出现。
-        Hint hintFor(int q, int[] used) {
+        // force=true 时，下界为 0、暂无可推结论的形状也保留（绘制时只画淡色符号），
+        // 这样每个数字格从发牌那一刻起就有符号，不会等周围翻开才冒出来。
+        Hint hintFor(int q, int[] used, boolean force) {
             if (!rev[q]) return null;
             int v = num(q);
             if (v == 0) return null;
@@ -326,7 +327,7 @@ public class Sweeper extends JFrame {
                 }
                 if (lb > un) lb = un;                      // 形状内雷数不可能超过未开格数
                 boolean exact = (lb == base);
-                if (!exact && lb < 1) continue;   // 「至少 0 颗」不携带信息，不生成
+                if (!exact && lb < 1 && !force) continue;   // 下界为 0 的形状默认不生成，force 时保留
                 int score = (exact ? 100 : 0) + lb * 10 - un - (used == null ? 0 : used[k]);
                 if (score > bestScore) {
                     bestScore = score;
@@ -342,7 +343,7 @@ public class Sweeper extends JFrame {
             ArrayList<Hint> out = new ArrayList<>();
             int[] used = new int[NK];
             for (int q = 0; q < R*C; q++) {
-                Hint h = hintFor(q, used);
+                Hint h = hintFor(q, used, true);
                 if (h != null) { out.add(h); used[keyIndex(h.key)]++; }
             }
             return out;
@@ -473,7 +474,7 @@ public class Sweeper extends JFrame {
         weak = new ArrayList<>();
         int[] used = new int[NK];
         for (int q = 0; q < R * C; q++) {
-            Hint h = board.hintFor(q, used);
+            Hint h = board.hintFor(q, used, true);
             if (h != null) { weakByCell[q] = h; weak.add(h); used[keyIndex(h.key)]++; }
         }
     }
@@ -496,7 +497,7 @@ public class Sweeper extends JFrame {
     }
     static boolean addWeak(int q, int[] used) {
         if (q < 0 || q >= R * C || weakByCell[q] != null) return false;
-        Hint h = board.hintFor(q, used);
+        Hint h = board.hintFor(q, used, true);
         if (h == null) return false;
         weakByCell[q] = h; used[keyIndex(h.key)]++;
         return true;
@@ -743,7 +744,7 @@ public class Sweeper extends JFrame {
         int v = board.num(i);
         if (v == 0) { status.setText(" 空格，周围没有雷"); return; }
         String exactTxt = null, weakTxt = null;
-        for (Hint h : hints) if (h.i == i) exactTxt = DISP.get(h.key) + h.lb;
+        for (Hint h : hints) if (h.i == i && h.lb >= 1) exactTxt = DISP.get(h.key) + h.lb;
         for (Hint h : weak) if (h.i == i && (h.exact || h.lb >= 1)) weakTxt = DISP.get(h.key) + h.lb;
         String pos = "R" + (i / C + 1) + "C" + (i % C + 1);
         if (exactTxt != null)
@@ -778,7 +779,7 @@ public class Sweeper extends JFrame {
         if (board == null) { mineLabel.setText(" "); return; }   // 首次发牌全失败时盘面还不存在
         int flags = 0;
         for (int i = 0; i < R*C; i++) if (board.flag[i]) flags++;
-        // weak 里现在也装着「至少 0 颗」的形状（给「全部」档用），统计时不把它们算进「至少」
+        // weak 里也装着下界为 0 的形状（给「全部」档画淡色符号用），统计时不把它们算进「至少」
         int ex = 0, weakCount = 0;
         for (Hint h : weak) { if (h.exact) ex++; else if (h.lb >= 1) weakCount++; }
         mineLabel.setText("剩余雷 " + (M - flags) + " · 精确 " + ex + " / 至少 " + weakCount + "  ");
@@ -930,29 +931,43 @@ public class Sweeper extends JFrame {
                 if (densityLevel == 1 && !h.exact && h.lb < 2) continue;
                 int r = h.i / C, c = h.i % C;
                 int x = ox + c*cell, y = oy + r*cell;
-                String txt = DISP.get(h.key) + h.lb;
-                int tw = fm.stringWidth(txt);
-                // 「共有 n 颗」放右下角；「至少 n 颗」放右上角。lb 为 0 的非精确提示不会出现。
+                // 右下角 = 「共有 n 颗」（n 可为 0，即安全提示），右上角 = 「至少 n 颗」。
+                // 下界为 0 的非精确提示没有可写的数字：只画一个淡色符号，不进任何角落。
                 if (h.exact) {
+                    String txt = DISP.get(h.key) + h.lb;
+                    int tw = fm.stringWidth(txt);
                     g.setColor(new Color(0x2F, 0x6F, 0xA8));
                     g.drawString(txt, x + cell - tw - 3, y + cell - 4);
-                } else {
+                } else if (h.lb >= 1) {
+                    String txt = DISP.get(h.key) + h.lb;
+                    int tw = fm.stringWidth(txt);
                     g.setColor(new Color(0xB0, 0x6A, 0x00));
                     g.drawString(txt, x + cell - tw - 3, y + 11);
+                } else {
+                    String txt = DISP.get(h.key);
+                    int tw = fm.stringWidth(txt);
+                    g.setColor(new Color(0xAE, 0xBF, 0xCE));
+                    g.drawString(txt, x + cell - tw - 3, y + cell - 4);
                 }
                 drawn.add(h.i);
             }
             for (Hint h : hints) {
                 if (!board.rev[h.i] || drawn.contains(h.i)) continue;
-                // solve 用的提示集合里可能有「至少 0 颗」的条目，同样不画
-                if (!h.exact && h.lb == 0) continue;
-                drawn.add(h.i);
                 int r = h.i / C, c = h.i % C;
                 int x = ox + c*cell, y = oy + r*cell;
-                String txt = DISP.get(h.key) + h.lb;
-                int tw = fm.stringWidth(txt);
-                g.setColor(new Color(0x2F, 0x6F, 0xA8));
-                g.drawString(txt, x + cell - tw - 3, y + cell - 4);
+                if (!h.exact && h.lb == 0) {
+                    // 与 weak 同一口径：下界为 0 只画淡色符号
+                    String txt = DISP.get(h.key);
+                    int tw = fm.stringWidth(txt);
+                    g.setColor(new Color(0xAE, 0xBF, 0xCE));
+                    g.drawString(txt, x + cell - tw - 3, y + cell - 4);
+                } else {
+                    String txt = DISP.get(h.key) + h.lb;
+                    int tw = fm.stringWidth(txt);
+                    g.setColor(new Color(0x2F, 0x6F, 0xA8));
+                    g.drawString(txt, x + cell - tw - 3, y + cell - 4);
+                }
+                drawn.add(h.i);
             }
         }
 
