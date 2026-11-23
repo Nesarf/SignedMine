@@ -296,10 +296,8 @@ public class Sweeper extends JFrame {
         // 旧版把 rest(q2) - inner 直接当成「形状外雷数下界」，于是把「两边都不在」的那些格子
         // 算进了形状外，上界被压低到与下界相等，判出假的「精确值」——玩家照着推理会错。
         // 判定：lb == base 才算精确（此时形状内恰好 base 颗）。
-        // force=true 时不丢掉「至少 0 颗」这种没有结论的形状：
-        // 「全部」档要给每个数字格都挂上符号与小数字，数据层就得把它们一起留着，
-        // 由绘图层按档位自己过滤。
-        Hint hintFor(int q, int[] used, boolean force) {
+        // 「至少 0 颗」（非精确且 lb=0）不携带任何信息，这里直接不生成，盘面上不会出现。
+        Hint hintFor(int q, int[] used) {
             if (!rev[q]) return null;
             int v = num(q);
             if (v == 0) return null;
@@ -328,7 +326,7 @@ public class Sweeper extends JFrame {
                 }
                 if (lb > un) lb = un;                      // 形状内雷数不可能超过未开格数
                 boolean exact = (lb == base);
-                if (!exact && lb < 1 && !force) continue;   // 「至少 0 颗」不携带信息，默认不显示
+                if (!exact && lb < 1) continue;   // 「至少 0 颗」不携带信息，不生成
                 int score = (exact ? 100 : 0) + lb * 10 - un - (used == null ? 0 : used[k]);
                 if (score > bestScore) {
                     bestScore = score;
@@ -344,7 +342,7 @@ public class Sweeper extends JFrame {
             ArrayList<Hint> out = new ArrayList<>();
             int[] used = new int[NK];
             for (int q = 0; q < R*C; q++) {
-                Hint h = hintFor(q, used, true);
+                Hint h = hintFor(q, used);
                 if (h != null) { out.add(h); used[keyIndex(h.key)]++; }
             }
             return out;
@@ -475,7 +473,7 @@ public class Sweeper extends JFrame {
         weak = new ArrayList<>();
         int[] used = new int[NK];
         for (int q = 0; q < R * C; q++) {
-            Hint h = board.hintFor(q, used, true);
+            Hint h = board.hintFor(q, used);
             if (h != null) { weakByCell[q] = h; weak.add(h); used[keyIndex(h.key)]++; }
         }
     }
@@ -498,7 +496,7 @@ public class Sweeper extends JFrame {
     }
     static boolean addWeak(int q, int[] used) {
         if (q < 0 || q >= R * C || weakByCell[q] != null) return false;
-        Hint h = board.hintFor(q, used, true);
+        Hint h = board.hintFor(q, used);
         if (h == null) return false;
         weakByCell[q] = h; used[keyIndex(h.key)]++;
         return true;
@@ -926,19 +924,17 @@ public class Sweeper extends JFrame {
                 if (!board.rev[h.i] || drawn.contains(h.i)) continue;
                 boolean any = false;
                 for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) any = true;
-                // 「全部」档连没有结论（至少 0 颗）的形状也画，形状里是否还有未开格就不重要了
-                if (densityLevel < 2 && !any) continue;
+                // 形状里没有未开格可标，画出来没有对象
+                if (!any) continue;
                 if (densityLevel == 0 && !h.exact) continue;
                 if (densityLevel == 1 && !h.exact && h.lb < 2) continue;
                 int r = h.i / C, c = h.i % C;
                 int x = ox + c*cell, y = oy + r*cell;
                 String txt = DISP.get(h.key) + h.lb;
                 int tw = fm.stringWidth(txt);
-                // 「共有 n 颗」与「至少 0 颗」都放右下角：0 颗没有信息量，不该占右上角，
-                // 右上角留给真正的「至少 n 颗」。
-                if (h.exact || h.lb == 0) {
-                    if (h.exact) g.setColor(new Color(0x2F, 0x6F, 0xA8));
-                    else g.setColor(new Color(0xB0, 0x6A, 0x00));
+                // 「共有 n 颗」放右下角；「至少 n 颗」放右上角。lb 为 0 的非精确提示不会出现。
+                if (h.exact) {
+                    g.setColor(new Color(0x2F, 0x6F, 0xA8));
                     g.drawString(txt, x + cell - tw - 3, y + cell - 4);
                 } else {
                     g.setColor(new Color(0xB0, 0x6A, 0x00));
@@ -948,6 +944,8 @@ public class Sweeper extends JFrame {
             }
             for (Hint h : hints) {
                 if (!board.rev[h.i] || drawn.contains(h.i)) continue;
+                // solve 用的提示集合里可能有「至少 0 颗」的条目，同样不画
+                if (!h.exact && h.lb == 0) continue;
                 drawn.add(h.i);
                 int r = h.i / C, c = h.i % C;
                 int x = ox + c*cell, y = oy + r*cell;
