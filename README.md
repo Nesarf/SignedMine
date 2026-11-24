@@ -135,6 +135,7 @@ java -cp build-java EngineProbe 30          # 发牌成功率/耗时、提示自
 java -cp build-java LevelProbe 10           # 24 档逐档发牌，看有没有发不出来的档
 java -cp build-java UndoProbe               # 撤销：局面、提示表、按钮状态、新局清空
 java -cp build-java CustomProbe             # 自定义难度与下拉框回落
+java -cp build-java FlagProbe              # 插旗不改变任何提示
 java -cp build-java IncrementalProbe        # 增量补算出的提示在推进中是否仍恒成立
 java -cp build-java ExactDump               # 打印一条「精确值不成立」提示的中间量
 java -cp build-java Sweeper shot out.png 2 14  # 截图：档位 2（全部）、难度 14（16×30·100）
