@@ -468,6 +468,12 @@ function shapeHintFor(b,q,s,force){
   const nb=b.nbs(q);
   let base=v;
   for(let t=0;t<nb.length;t++){ const p=nb[t]; if(s ? s[p]===2 : b.known.has(p)) base--; }
+  // 玩家把该格周围的雷全标了旗（按自己的判断），剩余雷按 0 算：
+  // 形状覆盖未开格时因此能写出「共有 0 颗」——含义是形状内没有雷，可以点。
+  // 旗若插错，这条提示会跟着错，与「周围旗满就连开」同一口径，结论以旗为准。
+  let flagged=0;
+  for(let t=0;t<nb.length;t++) if(b.flag.has(nb[t])) flagged++;
+  if(flagged===v) base=0;
   let best=null;
   for(let k=0;k<NK;k++){
     const cells=b.shapeCellsK(q,k), cl=cells.length;
@@ -504,8 +510,7 @@ function shapeHintFor(b,q,s,force){
     if(!best||score>best.score) best={score,key:KEYS[k],lb,exact,n:unk};
   }
   if(!best) return null;
-  return {i:q,key:best.key,lb:best.lb,exact:best.exact,n:best.n,
-    trivial:best.exact&&(best.lb===0||best.lb>=best.n)};
+  return {i:q,key:best.key,lb:best.lb,exact:best.exact,n:best.n};
 }
 
 // force=true 时每个已翻开的数字格都会得到一条提示（含下界为 0 的）。
@@ -687,18 +692,20 @@ function drawHints(){
     if(!board.rev.has(h.i)||drawn.has(h.i)) continue;
     if(lvl===3) continue;                       // 关闭
     // 形状里没有未开格可标，画出来没有对象
-    if(!board.shapeCells(h.i,h.key).some(p=>!board.rev.has(p))) continue;
-    if(lvl===0 && (!h.exact || h.trivial)) continue;   // 精简：只留非平凡的精确值
-    if(lvl===1 && (h.trivial || (!h.exact && h.lb<2))) continue; // 标准：再加「至少 2 颗」以上
+    const cells=board.shapeCells(h.i,h.key);
+    if(!cells.some(p=>!board.rev.has(p))) continue;
+    if(lvl===0 && !h.exact) continue;             // 精简：只留精确值
+    if(lvl===1 && (!h.exact && h.lb<2)) continue; // 标准：再加「至少 2 颗」以上
+    // 只有两种颜色，位置就是语义：
+    //   右下角「共有 n 颗」→ 蓝；右上角「至少 n 颗」→ 橙。
+    // 下界为 0 的提示没有数字可写，只画一个淡色符号。
     const [r,c]=board.RC(h.i);
     const x=pad+c*s, y=pad+r*s;
     ctx.font=`${Math.max(6,Math.round(s*0.28))}px system-ui, sans-serif`;
     ctx.textAlign='right';
-    // 右下角 = 「共有 n 颗」，右上角 = 「至少 n 颗」，两个角落各司其职。
-    // 下界为 0 的提示没有可写的数字：只画一个淡色符号，不进任何角落。
     if(h.exact){
       ctx.textBaseline='alphabetic';
-      ctx.fillStyle=h.trivial ? '#8aa7bd' : '#2f6fa8';
+      ctx.fillStyle='#2f6fa8';
       ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-2);
     } else if(h.lb>=1){
       ctx.textBaseline='top'; ctx.fillStyle='#b06a00';

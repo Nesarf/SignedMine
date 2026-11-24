@@ -18,7 +18,7 @@ for (const [R, C, M] of CASES) {
       mines: [...b.mines].sort((x, y) => x - y),
       snapshot: [...r.snapshot].sort((x, y) => x - y),
       hints: r.hints.map((h) => `${h.i}:${h.key}:${h.lb}`),
-      shape: shapeHints(b).map((h) => `${h.i}:${h.key}:${h.lb}:${h.exact ? 'e' : 'l'}:${h.trivial ? 't' : 'f'}`),
+      shape: shapeHints(b).map((h) => `${h.i}:${h.key}:${h.lb}:${h.exact ? 'e' : 'l'}`),
     });
   }
 }

@@ -304,6 +304,12 @@ public class Sweeper extends JFrame {
             if (v == 0) return null;
             int base = rest(q);
             int[] nb = NB[q];
+            // 玩家把该格周围的雷全标了旗（按自己的判断），剩余雷按 0 算：
+            // 形状覆盖未开格时因此能写出「共有 0 颗」——含义是形状内没有雷，可以点。
+            // 旗若插错，这条提示会跟着错，与「周围旗满就连开」同一口径，结论以旗为准。
+            int flagged = 0;
+            for (int p : nb) if (flag[p]) flagged++;
+            if (flagged == v) base = 0;
             Hint best = null;
             int bestScore = Integer.MIN_VALUE;
             for (int k = 0; k < NK; k++) {
@@ -931,8 +937,9 @@ public class Sweeper extends JFrame {
                 if (densityLevel == 1 && !h.exact && h.lb < 2) continue;
                 int r = h.i / C, c = h.i % C;
                 int x = ox + c*cell, y = oy + r*cell;
-                // 右下角 = 「共有 n 颗」（n 可为 0，即安全提示），右上角 = 「至少 n 颗」。
-                // 下界为 0 的非精确提示没有可写的数字：只画一个淡色符号，不进任何角落。
+                // 只有两种颜色，位置就是语义：
+                //   右下角「共有 n 颗」→ 蓝；右上角「至少 n 颗」→ 橙。
+                // 下界为 0 的提示没有数字可写，只画一个淡色符号。
                 if (h.exact) {
                     String txt = DISP.get(h.key) + h.lb;
                     int tw = fm.stringWidth(txt);
