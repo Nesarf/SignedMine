@@ -304,27 +304,23 @@ public class Sweeper extends JFrame {
             if (v == 0) return null;
             int base = rest(q);
             int[] nb = NB[q];
-            // 玩家把该格周围的雷全标了旗（按自己的判断），剩余雷按 0 算：
-            // 形状覆盖未开格时因此能写出「共有 0 颗」——含义是形状内没有雷，可以点。
-            // 旗若插错，这条提示会跟着错，与「周围旗满就连开」同一口径，结论以旗为准。
-            int flagged = 0;
-            for (int p : nb) if (flag[p]) flagged++;
-            if (flagged == v) base = 0;
+            // 旗子只是玩家自己的标记，不参与任何计算：这里的「未开」一律指未翻开，
+            // 插旗与否不影响符号与数字。只有求解标记（known）才算已知的雷。
             Hint best = null;
             int bestScore = Integer.MIN_VALUE;
             for (int k = 0; k < NK; k++) {
                 int[] cells = shapeCellsK(q, k);
                 int un = 0;
-                for (int p : cells) if (unk(p)) un++;
+                for (int p : cells) if (!rev[p]) un++;
                 if (un == 0) continue;
                 int outside = 0;
-                for (int p : nb) if (unk(p) && !contains(cells, p)) outside++;
+                for (int p : nb) if (!rev[p] && !contains(cells, p)) outside++;
                 int lb = Math.max(0, base - outside);
                 for (int q2 : nb) {
                     if (!rev[q2] || num(q2) == 0) continue;
                     int inner = 0, unkQ2 = 0;
                     for (int p : NB[q2]) {
-                        if (!unk(p)) continue;
+                        if (rev[p]) continue;
                         unkQ2++;
                         if (contains(cells, p)) inner++;
                     }

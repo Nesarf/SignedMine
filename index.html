@@ -468,23 +468,19 @@ function shapeHintFor(b,q,s,force){
   const nb=b.nbs(q);
   let base=v;
   for(let t=0;t<nb.length;t++){ const p=nb[t]; if(s ? s[p]===2 : b.known.has(p)) base--; }
-  // 玩家把该格周围的雷全标了旗（按自己的判断），剩余雷按 0 算：
-  // 形状覆盖未开格时因此能写出「共有 0 颗」——含义是形状内没有雷，可以点。
-  // 旗若插错，这条提示会跟着错，与「周围旗满就连开」同一口径，结论以旗为准。
-  let flagged=0;
-  for(let t=0;t<nb.length;t++) if(b.flag.has(nb[t])) flagged++;
-  if(flagged===v) base=0;
+  // 旗子只是玩家自己的标记，不参与任何计算：这里的「未开」一律指未翻开，
+  // 插旗与否不影响符号与数字。求解标记（known）才算已知的雷。
   let best=null;
   for(let k=0;k<NK;k++){
     const cells=b.shapeCellsK(q,k), cl=cells.length;
     let unk=0;
     if(s){ for(let t=0;t<cl;t++) if(s[cells[t]]===1) unk++; }
-    else { for(let t=0;t<cl;t++) if(b.unk(cells[t])) unk++; }
+    else { for(let t=0;t<cl;t++) if(!b.rev.has(cells[t])) unk++; }
     if(!unk) continue;
     let outside=0;
     for(let t=0;t<nb.length;t++){
       const p=nb[t];
-      if(!(s ? s[p]===1 : b.unk(p))) continue;
+      if(!(s ? s[p]===1 : !b.rev.has(p))) continue;
       if(!inCells(cells,p)) outside++;
     }
     let lb=Math.max(0, base-outside);
@@ -496,7 +492,7 @@ function shapeHintFor(b,q,s,force){
       let inner=0, unkQ2=0;
       for(let u=0;u<nb2.length;u++){
         const p=nb2[u];
-        if(!(s ? s[p]===1 : b.unk(p))) continue;
+        if(!(s ? s[p]===1 : !b.rev.has(p))) continue;
         unkQ2++;
         if(inCells(cells,p)) inner++;
       }
